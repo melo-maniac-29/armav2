@@ -166,7 +166,7 @@ export default function IssuesPage() {
       {/* Filters */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <div className="flex rounded-lg overflow-hidden border border-gray-700">
-          {(["open", "dismissed", "all"] as const).map((s) => (
+          {(["open", "dismissed", "fixed", "all"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
@@ -253,12 +253,14 @@ export default function IssuesPage() {
                     {issue.status === "fixed" && (
                       <span className="text-xs text-emerald-400 font-medium">✓ Fixed</span>
                     )}
-                    <button
-                      onClick={() => handleDismiss(issue)}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                    >
-                      {issue.status === "dismissed" ? "Reopen" : issue.status === "fixed" ? "" : "Dismiss"}
-                    </button>
+                    {issue.status !== "fixed" && (
+                      <button
+                        onClick={() => handleDismiss(issue)}
+                        className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      >
+                        {issue.status === "dismissed" ? "Reopen" : "Dismiss"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

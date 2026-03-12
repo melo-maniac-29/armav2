@@ -192,7 +192,7 @@ export interface IssueOut {
   issue_type: "bug" | "security" | "performance" | "style" | "other";
   title: string;
   description: string;
-  status: "open" | "dismissed";
+  status: "open" | "dismissed" | "fixed";
   created_at: string;
 }
 
