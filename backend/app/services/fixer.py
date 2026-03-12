@@ -154,7 +154,10 @@ async def _get_context(
     """
     try:
         embed_model = us.embedding_model or "text-embedding-ada-002"
-        vecs = await _embed_batch([query], client, embed_model)
+        # Use the dedicated embed endpoint if configured, otherwise fall back to chat endpoint
+        embed_base = us.embed_api_base or us.openai_api_base or "https://api.openai.com/v1"
+        embed_client = AsyncOpenAI(api_key=client.api_key, base_url=embed_base)
+        vecs = await _embed_batch([query], embed_client, embed_model)
         if not vecs:
             return []
         q_vec = vecs[0]
