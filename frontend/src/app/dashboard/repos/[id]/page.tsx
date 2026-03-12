@@ -1,27 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { tokenStore } from "@/lib/auth";
-import { reposApi, RepoFileOut, RepoOut } from "@/lib/api";
+import { reposApi, issuesApi, RepoFileOut, RepoOut, IssueListResponse } from "@/lib/api";
 
-export default function RepoOverviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default function RepoOverviewPage() {
+  const params = useParams<{ id: string }>();
+  const repoId = params?.id ?? "";
+
   const [files, setFiles] = useState<RepoFileOut[] | null>(null);
   const [repo, setRepo] = useState<RepoOut | null>(null);
+  const [issues, setIssues] = useState<IssueListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    params.then(async ({ id }) => {
-      const access = tokenStore.getAccess();
-      if (!access) return;
-      const [r, f] = await Promise.allSettled([
-        reposApi.get(access, id),
-        reposApi.files(access, id),
-      ]);
+    if (!repoId) return;
+    const access = tokenStore.getAccess();
+    if (!access) return;
+    Promise.allSettled([
+      reposApi.get(access, repoId),
+      reposApi.files(access, repoId),
+      issuesApi.list(access, repoId, { status: "open" }),
+    ]).then(([r, f, i]) => {
       if (r.status === "fulfilled") setRepo(r.value);
       if (f.status === "fulfilled") setFiles(f.value);
+      if (i.status === "fulfilled") setIssues(i.value);
       setLoading(false);
     });
-  }, [params]);
+  }, [repoId]);
 
   if (loading) {
     return <p className="text-gray-500 text-sm">Loading…</p>;
@@ -54,10 +62,17 @@ export default function RepoOverviewPage({ params }: { params: Promise<{ id: str
     const lang = f.language ?? "Other";
     langCount[lang] = (langCount[lang] ?? 0) + 1;
   }
-  const langs = Object.entries(langCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
+  const langs = Object.entries(langCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const total = files?.length ?? 0;
+
+  const severityOrder = ["critical", "error", "warning", "info"] as const;
+  const severityColors: Record<string, string> = {
+    critical: "text-red-400",
+    error:    "text-orange-400",
+    warning:  "text-yellow-400",
+    info:     "text-blue-400",
+  };
+  const hasIssues = issues && issues.total > 0;
 
   return (
     <div className="grid sm:grid-cols-2 gap-4">
@@ -82,6 +97,45 @@ export default function RepoOverviewPage({ params }: { params: Promise<{ id: str
             <dd className="text-gray-400">{new Date(repo.created_at).toLocaleDateString()}</dd>
           </div>
         </dl>
+      </div>
+
+      {/* Issues summary */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Open Issues</h2>
+          <Link
+            href={`/dashboard/repos/${repoId}/issues`}
+            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            View all →
+          </Link>
+        </div>
+        {!hasIssues ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-gray-500">No issues found yet.</p>
+            <Link
+              href={`/dashboard/repos/${repoId}/issues`}
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              Run Analysis →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-2xl font-bold text-white">{issues.total}</p>
+            <div className="flex gap-3 flex-wrap">
+              {severityOrder.map((s) => {
+                const count = issues.by_severity[s] ?? 0;
+                if (!count) return null;
+                return (
+                  <span key={s} className={`text-xs font-semibold ${severityColors[s]}`}>
+                    {count} {s}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Language breakdown */}
@@ -111,11 +165,10 @@ export default function RepoOverviewPage({ params }: { params: Promise<{ id: str
 
       {/* Webhook setup */}
       {repo.webhook_secret && (
-        <div className="sm:col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Webhook Setup</h2>
           <p className="text-xs text-gray-500 mb-3">
-            Add this webhook to your GitHub repo (Settings → Webhooks → Add webhook) to trigger automatic
-            analysis on every push.
+            Add this webhook to your GitHub repo to trigger automatic analysis on every push.
           </p>
           <div className="space-y-2">
             <div>
@@ -130,7 +183,7 @@ export default function RepoOverviewPage({ params }: { params: Promise<{ id: str
                 {repo.webhook_secret}
               </code>
             </div>
-            <p className="text-xs text-gray-600">Content type: <span className="text-gray-500">application/json</span> · Events: <span className="text-gray-500">Just the push event</span></p>
+            <p className="text-xs text-gray-600">Content type: <span className="text-gray-500">application/json</span> · Events: <span className="text-gray-500">push</span></p>
           </div>
         </div>
       )}

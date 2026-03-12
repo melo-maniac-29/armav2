@@ -14,10 +14,13 @@ class UserSettings(Base, TimestampMixin):
     github_token_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     # OpenAI-compatible API key — Fernet-encrypted, null if not set
     openai_token_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Base URL for OpenAI-compatible server (e.g. http://localhost:5005/v1)
+    # Base URL for OpenAI-compatible chat/analysis server (e.g. http://localhost:5005/v1)
     # Stored in plain text — not sensitive (no credentials here)
     openai_api_base: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    # Embedding model name served at the above base URL
+    # Separate base URL for embedding server (e.g. http://localhost:1234/v1)
+    # Falls back to openai_api_base if not set
+    embed_api_base: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Embedding model name served at the embed base URL
     embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # Chat model name for analysis (defaults to gpt-4o in analysis service)
     analysis_model: Mapped[str | None] = mapped_column(String(100), nullable=True)

@@ -1,4 +1,8 @@
+import logging
 from fastapi import FastAPI
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(name)s] %(message)s")
+
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from backend.app.config import get_settings
@@ -11,6 +15,7 @@ from backend.app.api import search as search_router
 from backend.app.api import webhooks as webhooks_router
 from backend.app.api import pr_jobs as pr_jobs_router
 from backend.app.api import feature_requests as feature_requests_router
+from backend.app.api import dashboard as dashboard_router
 
 settings = get_settings()
 
@@ -39,6 +44,7 @@ app.include_router(search_router.router, prefix="/repos", tags=["search"])
 app.include_router(pr_jobs_router.router, prefix="/repos", tags=["pr-jobs"])
 app.include_router(feature_requests_router.router, prefix="/repos", tags=["feature-requests"])
 app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
+app.include_router(dashboard_router.router, prefix="/dashboard", tags=["dashboard"])
 
 
 @app.get("/health")

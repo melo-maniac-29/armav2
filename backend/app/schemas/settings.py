@@ -13,6 +13,10 @@ class SaveAPIBaseRequest(BaseModel):
     api_base: str          # e.g. http://localhost:5005/v1
 
 
+class SaveEmbedApiBaseRequest(BaseModel):
+    embed_api_base: str    # e.g. http://localhost:1234/v1
+
+
 class SaveEmbeddingModelRequest(BaseModel):
     embedding_model: str   # e.g. text-embedding-ada-002
 
@@ -25,6 +29,7 @@ class SettingsResponse(BaseModel):
     has_github_token: bool
     has_openai_key: bool = False
     openai_api_base: str | None = None
+    embed_api_base: str | None = None
     embedding_model: str | None = None
     analysis_model: str | None = None
 

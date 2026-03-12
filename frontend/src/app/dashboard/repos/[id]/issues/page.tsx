@@ -60,15 +60,22 @@ export default function IssuesPage() {
   async function handleAnalyze() {
     setAnalyzeError(null);
     setAnalyzing(true);
+    // Remember current run_id so we can detect when a NEW analysis completes
+    const prevRunId = data?.issues[0]?.run_id ?? null;
     try {
       const access = tokenStore.getAccess()!;
       await issuesApi.analyze(access, repoId);
-      // Poll for up to 5 min
       const start = Date.now();
       const poll = async () => {
         if (Date.now() - start > 300_000) { setAnalyzing(false); return; }
         const res = await issuesApi.list(access, repoId).catch(() => null);
-        if (res && res.issues.length > 0) {
+        if (!res) { setTimeout(poll, 4000); return; }
+        const newRunId = res.issues[0]?.run_id ?? null;
+        // New run complete when run_id changed, or first-ever run produced results
+        const isDone = prevRunId === null
+          ? res.issues.length > 0
+          : (newRunId !== null && newRunId !== prevRunId);
+        if (isDone) {
           setData(res);
           setAnalyzing(false);
         } else {
@@ -143,14 +150,14 @@ export default function IssuesPage() {
           {analyzing ? (
             <>
               <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              Analyzing…
+              Analyzing… (~45s)
             </>
           ) : (
             <>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
               </svg>
-              Analyze with GPT-4o
+              Run Analysis
             </>
           )}
         </button>

@@ -3,9 +3,12 @@ GPT-4o code analysis service.
 Reads cloned repo files and returns structured issue dicts.
 """
 import json
+import logging
 from pathlib import Path
 
 from openai import AsyncOpenAI
+
+log = logging.getLogger(__name__)
 
 # Languages worth sending to GPT-4o for code review
 ANALYZABLE_LANGUAGES = {
@@ -30,24 +33,22 @@ EXT_LANG: dict[str, str] = {
     ".sql": "SQL",
 }
 
-MAX_FILE_BYTES = 40_000   # 40 KB per file — prevents huge context windows
-MAX_FILES = 100           # cap to avoid runaway API costs
+MAX_FILE_BYTES = 8_000  # 8 KB per file
+MAX_FILES = 18          # top-ranked files (6 batches of 3 = 6 LLM calls)
+BATCH_SIZE = 3          # files per LLM call
 
-SYSTEM_PROMPT = """You are an expert code reviewer. Analyze the provided source file for:
+SYSTEM_PROMPT = """You are an expert code reviewer. Analyze the provided source files for issues.
+
+For each file find:
 - Bugs (logic errors, null pointer risks, off-by-one errors, unhandled exceptions)
-- Security vulnerabilities (injection, hardcoded secrets, improper input validation, insecure dependencies)
+- Security vulnerabilities (injection, hardcoded secrets, improper input validation)
 - Performance issues (inefficient algorithms, N+1 queries, unnecessary work)
 - Code quality issues (dead code, unclear logic, poor error handling)
 
-Return a JSON object with an "issues" array. Each element must have:
-- "line_number": integer or null (approximate line where the issue occurs)
-- "severity": "info" | "warning" | "error" | "critical"
-- "issue_type": "bug" | "security" | "performance" | "style" | "other"
-- "title": string — one-line summary, max 80 characters
-- "description": string — clear explanation, impact, and suggested fix
-
-Return {"issues": []} if no meaningful issues are found.
-Return ONLY valid JSON. Do not include any text outside the JSON object."""
+Return JSON: {"files": [{"path": "<path>", "issues": [...]}, ...]}
+Each issue: line_number (int|null), severity (info|warning|error|critical),
+issue_type (bug|security|performance|style|other), title (<=80 chars), description.
+Return {"files": []} if nothing found. Return ONLY valid JSON."""
 
 
 async def analyze_repo(
@@ -79,63 +80,80 @@ async def analyze_repo(
     client = AsyncOpenAI(**client_kwargs)
     chat_model = model or "gpt-4o"
 
+    # Build (rel_path, lang, content) tuples
     if file_paths is not None:
-        candidates = [repo_dir / p for p in file_paths]
+        # Caller already ranked/filtered; trust the list
+        file_data: list[tuple[str, str, str]] = []
+        for fp in file_paths:
+            fpath = repo_dir / fp
+            if not fpath.exists():
+                continue
+            lang = EXT_LANG.get(fpath.suffix.lower(), "")
+            if lang not in ANALYZABLE_LANGUAGES:
+                continue
+            try:
+                content = fpath.read_text(errors="replace")
+            except Exception:
+                continue
+            if content.strip():
+                file_data.append((fp, lang, content))
     else:
+        # Fallback: walk disk, filter small code files, sort smallest-first
         candidates = [
             p for p in repo_dir.rglob("*")
             if p.is_file()
             and EXT_LANG.get(p.suffix.lower()) in ANALYZABLE_LANGUAGES
+            and p.stat().st_size <= MAX_FILE_BYTES
             and not any(part in SKIP_DIRS or part.startswith(".") for part in p.relative_to(repo_dir).parts[:-1])
         ]
-
-    # Limit and sort deterministically
-    candidates = sorted(candidates)[:MAX_FILES]
+        candidates = sorted(candidates, key=lambda p: p.stat().st_size)[:MAX_FILES]
+        file_data = []
+        for fpath in candidates:
+            lang = EXT_LANG.get(fpath.suffix.lower(), "")
+            try:
+                content = fpath.read_text(errors="replace")
+            except Exception:
+                continue
+            if content.strip():
+                rel = str(fpath.relative_to(repo_dir)).replace("\\", "/")
+                file_data.append((rel, lang, content))
 
     all_issues: list[dict] = []
 
-    for fpath in candidates:
-        if not fpath.exists():
-            continue
-
-        lang = EXT_LANG.get(fpath.suffix.lower(), "")
-        if lang not in ANALYZABLE_LANGUAGES:
-            continue
-
-        try:
-            content = fpath.read_text(errors="replace")
-        except Exception:
-            continue
-
-        if not content.strip():
-            continue
-
-        if len(content.encode()) > MAX_FILE_BYTES:
-            content = content[:MAX_FILE_BYTES] + "\n\n[...truncated due to size...]"
-
-        rel_path = str(fpath.relative_to(repo_dir)).replace("\\", "/")
+    # Process in batches of BATCH_SIZE — one LLM call per batch
+    for i in range(0, len(file_data), BATCH_SIZE):
+        batch = file_data[i : i + BATCH_SIZE]
+        parts = []
+        for rel_path, lang, content in batch:
+            parts.append(f"=== {rel_path} ({lang}) ===\n```{lang.lower()}\n{content}\n```")
+        user_content = "\n\n".join(parts)
 
         try:
             resp = await client.chat.completions.create(
                 model=chat_model,
-                response_format={"type": "json_object"},
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {
-                        "role": "user",
-                        "content": f"File: {rel_path}\nLanguage: {lang}\n\n```{lang.lower()}\n{content}\n```",
-                    },
+                    {"role": "user", "content": user_content},
                 ],
-                max_tokens=2000,
+                max_tokens=3000,
                 temperature=0,
             )
-            data = json.loads(resp.choices[0].message.content)
-            raw_issues = data.get("issues", []) if isinstance(data, dict) else []
-            for issue in raw_issues:
-                issue["file_path"] = rel_path
-            all_issues.extend(raw_issues)
-        except Exception:
-            # Skip files that cause errors — don't fail the whole run
+            raw_text = (resp.choices[0].message.content or "").strip()
+            if raw_text.startswith("```"):
+                raw_text = raw_text.split("```", 2)[1]
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:]
+                raw_text = raw_text.rstrip("`").strip()
+            data = json.loads(raw_text) if raw_text else {}
+            for file_result in (data.get("files", []) if isinstance(data, dict) else []):
+                fp = file_result.get("path", "")
+                for issue in (file_result.get("issues", []) or []):
+                    issue["file_path"] = fp
+                    all_issues.append(issue)
+            log.info("analysis: batch %d-%d done, issues so far: %d",
+                     i, i + len(batch) - 1, len(all_issues))
+        except Exception as exc:
+            log.warning("analysis: batch %d-%d failed: %s", i, i + len(batch) - 1, exc)
             continue
 
     return all_issues

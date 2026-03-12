@@ -65,7 +65,8 @@ async def embed_repo(repo_id: str, user_id: str, db: AsyncSession) -> None:
         return  # No OpenAI key configured — skip silently
 
     openai_key = decrypt(us.openai_token_encrypted)
-    api_base = us.openai_api_base or "https://api.openai.com/v1"
+    # Use dedicated embed_api_base if set, fall back to the chat api_base
+    api_base = us.embed_api_base or us.openai_api_base or "https://api.openai.com/v1"
     embed_model = us.embedding_model or "text-embedding-ada-002"
 
     client = AsyncOpenAI(api_key=openai_key, base_url=api_base)
@@ -166,7 +167,8 @@ async def semantic_search(
         return []
 
     openai_key = decrypt(us.openai_token_encrypted)
-    api_base = us.openai_api_base or "https://api.openai.com/v1"
+    # Use dedicated embed_api_base if set, fall back to the chat api_base
+    api_base = us.embed_api_base or us.openai_api_base or "https://api.openai.com/v1"
     embed_model = us.embedding_model or "text-embedding-ada-002"
 
     client = AsyncOpenAI(api_key=openai_key, base_url=api_base)

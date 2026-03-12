@@ -9,6 +9,7 @@ export default function SettingsPage() {
   const [pat, setPat] = useState("");
   const [openAIKey, setOpenAIKey] = useState("");
   const [apiBase, setApiBase] = useState("");
+  const [embedApiBase, setEmbedApiBase] = useState("");
   const [embeddingModel, setEmbeddingModel] = useState("");
   const [analysisModel, setAnalysisModel] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
@@ -20,6 +21,7 @@ export default function SettingsPage() {
     settingsApi.get(access).then((s) => {
       setSettings(s);
       setApiBase(s.openai_api_base ?? "");
+      setEmbedApiBase(s.embed_api_base ?? "");
       setEmbeddingModel(s.embedding_model ?? "");
       setAnalysisModel(s.analysis_model ?? "");
     });
@@ -93,6 +95,20 @@ export default function SettingsPage() {
       const s = await settingsApi.saveApiBase(tokenStore.getAccess()!, apiBase.trim());
       setSettings(s);
       flash("API base URL saved.", true);
+    } catch (err) {
+      flash(err instanceof ApiError ? err.message : "Failed to save URL.", false);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function handleSaveEmbedApiBase(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving("embed-base");
+    try {
+      const s = await settingsApi.saveEmbedApiBase(tokenStore.getAccess()!, embedApiBase.trim());
+      setSettings(s);
+      flash("Embed API base URL saved.", true);
     } catch (err) {
       flash(err instanceof ApiError ? err.message : "Failed to save URL.", false);
     } finally {
@@ -201,12 +217,24 @@ export default function SettingsPage() {
 
         {/* API Base URL */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
-          <p className="text-xs text-gray-400 mb-2">e.g. http://localhost:5005/v1 (leave blank for OpenAI default)</p>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Chat API Base URL</label>
+          <p className="text-xs text-gray-400 mb-2">For analysis / fix / feature LLM calls. e.g. http://localhost:5005/v1 (leave blank for OpenAI default)</p>
           <form onSubmit={handleSaveApiBase} className="flex gap-2">
             <input type="url" value={apiBase} onChange={(e) => setApiBase(e.target.value)} placeholder="http://localhost:5005/v1" className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             <button type="submit" disabled={saving === "base"} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50">
               {saving === "base" ? "Saving…" : "Save"}
+            </button>
+          </form>
+        </div>
+
+        {/* Embed API Base URL */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Embed API Base URL</label>
+          <p className="text-xs text-gray-400 mb-2">For embedding calls (LM Studio direct). e.g. http://172.29.80.1:1234/v1 — falls back to Chat API Base if blank</p>
+          <form onSubmit={handleSaveEmbedApiBase} className="flex gap-2">
+            <input type="url" value={embedApiBase} onChange={(e) => setEmbedApiBase(e.target.value)} placeholder="http://172.29.80.1:1234/v1" className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button type="submit" disabled={saving === "embed-base"} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50">
+              {saving === "embed-base" ? "Saving…" : "Save"}
             </button>
           </form>
         </div>

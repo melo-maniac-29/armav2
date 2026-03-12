@@ -73,6 +73,7 @@ export interface SettingsResponse {
   has_github_token: boolean;
   has_openai_key: boolean;
   openai_api_base: string | null;
+  embed_api_base: string | null;
   embedding_model: string | null;
   analysis_model: string | null;
 }
@@ -107,6 +108,12 @@ export const settingsApi = {
     request<SettingsResponse>("/settings/openai-api-base", {
       method: "PUT",
       body: JSON.stringify({ api_base }),
+    }, token),
+
+  saveEmbedApiBase: (token: string, embed_api_base: string) =>
+    request<SettingsResponse>("/settings/embed-api-base", {
+      method: "PUT",
+      body: JSON.stringify({ embed_api_base }),
     }, token),
 
   saveEmbeddingModel: (token: string, embedding_model: string) =>
@@ -296,6 +303,18 @@ export const featureRequestsApi = {
       { method: "POST", body: JSON.stringify({ description }) },
       token,
     ),
+};
+
+// --- Dashboard ---
+export interface DashboardSummary {
+  repos_total: number;
+  issues_open: number;
+  prs_opened: number;
+}
+
+export const dashboardApi = {
+  summary: (token: string) =>
+    request<DashboardSummary>("/dashboard/summary", {}, token),
 };
 
 // --- Search ---
