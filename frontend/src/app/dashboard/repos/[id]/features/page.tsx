@@ -12,6 +12,7 @@ const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
   sandboxing: { badge: "bg-yellow-900/50 text-yellow-300 border-yellow-700",  label: "Sandboxing" },
   pushing:    { badge: "bg-indigo-900/50 text-indigo-300 border-indigo-700",  label: "Pushing" },
   pr_opened:  { badge: "bg-green-900/50 text-green-300 border-green-700",     label: "PR Opened" },
+  merged:     { badge: "bg-purple-900/50 text-purple-300 border-purple-700",  label: "Merged ✓" },
   failed:     { badge: "bg-red-900/50 text-red-300 border-red-700",           label: "Failed" },
 };
 

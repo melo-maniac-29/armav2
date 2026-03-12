@@ -9,7 +9,7 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.deps import get_current_user
@@ -201,7 +201,13 @@ async def list_issues(
     if severity:
         query = query.where(Issue.severity == severity)
     query = query.order_by(
-        Issue.severity.in_(["critical", "error", "warning", "info"]).desc(),
+        case(
+            (Issue.severity == "critical", 0),
+            (Issue.severity == "error",    1),
+            (Issue.severity == "warning",  2),
+            (Issue.severity == "info",     3),
+            else_=4,
+        ),
         Issue.file_path,
     )
 

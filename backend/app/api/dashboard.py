@@ -47,7 +47,7 @@ async def dashboard_summary(
             await db.execute(
                 select(func.count(PrJob.id)).where(
                     PrJob.repo_id.in_(repo_ids),
-                    PrJob.status == "pr_opened",
+                    PrJob.status.in_(["pr_opened", "merged"]),
                 )
             )
         ).scalar() or 0

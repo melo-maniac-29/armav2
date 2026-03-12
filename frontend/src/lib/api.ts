@@ -243,7 +243,7 @@ export interface PrJobOut {
   issue_id: string;
   branch_name: string | null;
   patch_text: string | null;
-  status: "pending" | "generating" | "sandboxing" | "pushing" | "pr_opened" | "failed";
+  status: "pending" | "generating" | "sandboxing" | "pushing" | "pr_opened" | "merged" | "failed";
   error_msg: string | null;
   sandbox_log: string | null;
   sandbox_result: "passed" | "failed" | "skipped" | null;
@@ -275,7 +275,7 @@ export interface FeatureRequestOut {
   branch_name: string | null;
   plan_json: string | null;
   patches_json: string | null;
-  status: "pending" | "planning" | "coding" | "sandboxing" | "pushing" | "pr_opened" | "failed";
+  status: "pending" | "planning" | "coding" | "sandboxing" | "pushing" | "pr_opened" | "merged" | "failed";
   error_msg: string | null;
   sandbox_log: string | null;
   sandbox_result: "passed" | "failed" | "skipped" | null;
