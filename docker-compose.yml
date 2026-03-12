@@ -9,6 +9,8 @@ services:
       - ARMA_ENCRYPTION_KEY=${ARMA_ENCRYPTION_KEY:-}
       - ARMA_ENV=${ARMA_ENV:-development}
       - ARMA_CORS_ORIGINS=${ARMA_CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - repos_data:/app/repos
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,3 +37,4 @@ services:
 
 volumes:
   postgres_data:
+  repos_data:

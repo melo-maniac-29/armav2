@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from backend.app.config import get_settings
 from backend.app.api import auth
 from backend.app.api import settings as settings_router
+from backend.app.api import github as github_router
+from backend.app.api import repos as repos_router
 
 settings = get_settings()
 
@@ -25,6 +27,8 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+app.include_router(github_router.router, prefix="/github", tags=["github"])
+app.include_router(repos_router.router, prefix="/repos", tags=["repos"])
 
 
 @app.get("/health")

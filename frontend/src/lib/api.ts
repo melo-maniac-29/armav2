@@ -88,3 +88,58 @@ export const settingsApi = {
       method: "DELETE",
     }, token),
 };
+
+// --- GitHub ---
+export interface GithubRepoItem {
+  id: number;
+  full_name: string;
+  description: string | null;
+  private: boolean;
+  default_branch: string;
+  clone_url: string;
+  stargazers_count: number;
+  language: string | null;
+  updated_at: string | null;
+}
+
+export const githubApi = {
+  repos: (token: string) =>
+    request<GithubRepoItem[]>("/github/repos", {}, token),
+};
+
+// --- Repos ---
+export interface RepoOut {
+  id: string;
+  github_id: number;
+  full_name: string;
+  default_branch: string;
+  status: "pending" | "cloning" | "parsing" | "ready" | "error";
+  error_msg: string | null;
+  created_at: string;
+}
+
+export interface RepoFileOut {
+  id: string;
+  path: string;
+  language: string | null;
+  size_bytes: number | null;
+}
+
+export const reposApi = {
+  list: (token: string) =>
+    request<RepoOut[]>("/repos", {}, token),
+
+  connect: (
+    token: string,
+    body: { github_id: number; full_name: string; clone_url: string; default_branch: string }
+  ) => request<RepoOut>("/repos", { method: "POST", body: JSON.stringify(body) }, token),
+
+  get: (token: string, id: string) =>
+    request<RepoOut>(`/repos/${id}`, {}, token),
+
+  delete: (token: string, id: string) =>
+    request<void>(`/repos/${id}`, { method: "DELETE" }, token),
+
+  files: (token: string, id: string) =>
+    request<RepoFileOut[]>(`/repos/${id}/files`, {}, token),
+};
