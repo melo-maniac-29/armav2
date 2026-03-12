@@ -71,6 +71,10 @@ export const authApi = {
 // --- Settings ---
 export interface SettingsResponse {
   has_github_token: boolean;
+  has_openai_key: boolean;
+  openai_api_base: string | null;
+  embedding_model: string | null;
+  analysis_model: string | null;
 }
 
 export const settingsApi = {
@@ -86,6 +90,35 @@ export const settingsApi = {
   deletePat: (token: string) =>
     request<SettingsResponse>("/settings/github-token", {
       method: "DELETE",
+    }, token),
+
+  saveOpenAIKey: (token: string, openai_key: string) =>
+    request<SettingsResponse>("/settings/openai-key", {
+      method: "PUT",
+      body: JSON.stringify({ openai_key }),
+    }, token),
+
+  deleteOpenAIKey: (token: string) =>
+    request<SettingsResponse>("/settings/openai-key", {
+      method: "DELETE",
+    }, token),
+
+  saveApiBase: (token: string, api_base: string) =>
+    request<SettingsResponse>("/settings/openai-api-base", {
+      method: "PUT",
+      body: JSON.stringify({ api_base }),
+    }, token),
+
+  saveEmbeddingModel: (token: string, embedding_model: string) =>
+    request<SettingsResponse>("/settings/embedding-model", {
+      method: "PUT",
+      body: JSON.stringify({ embedding_model }),
+    }, token),
+
+  saveAnalysisModel: (token: string, analysis_model: string) =>
+    request<SettingsResponse>("/settings/analysis-model", {
+      method: "PUT",
+      body: JSON.stringify({ analysis_model }),
     }, token),
 };
 
@@ -115,6 +148,7 @@ export interface RepoOut {
   default_branch: string;
   status: "pending" | "cloning" | "parsing" | "ready" | "error";
   error_msg: string | null;
+  webhook_secret: string | null;
   created_at: string;
 }
 
@@ -142,4 +176,70 @@ export const reposApi = {
 
   files: (token: string, id: string) =>
     request<RepoFileOut[]>(`/repos/${id}/files`, {}, token),
+
+  reindex: (token: string, id: string) =>
+    request<{ detail: string }>(`/repos/${id}/reindex`, { method: "POST" }, token),
+};
+
+// --- Issues ---
+export interface IssueOut {
+  id: string;
+  repo_id: string;
+  run_id: string;
+  file_path: string;
+  line_number: number | null;
+  severity: "info" | "warning" | "error" | "critical";
+  issue_type: "bug" | "security" | "performance" | "style" | "other";
+  title: string;
+  description: string;
+  status: "open" | "dismissed";
+  created_at: string;
+}
+
+export interface IssueListResponse {
+  issues: IssueOut[];
+  total: number;
+  by_severity: Record<string, number>;
+}
+
+export const issuesApi = {
+  analyze: (token: string, repoId: string) =>
+    request<{ detail: string; repo_id: string }>(
+      `/repos/${repoId}/analyze`,
+      { method: "POST" },
+      token
+    ),
+
+  list: (token: string, repoId: string, params?: { status?: string; severity?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set("issue_status", params.status);
+    if (params?.severity) qs.set("severity", params.severity);
+    const q = qs.toString() ? `?${qs}` : "";
+    return request<IssueListResponse>(`/repos/${repoId}/issues${q}`, {}, token);
+  },
+
+  patch: (token: string, repoId: string, issueId: string, issueStatus: string) =>
+    request<IssueOut>(
+      `/repos/${repoId}/issues/${issueId}`,
+      { method: "PATCH", body: JSON.stringify({ status: issueStatus }) },
+      token
+    ),
+};
+
+// --- Search ---
+export interface SearchResult {
+  file_path: string;
+  chunk_name: string;
+  chunk_type: string;
+  chunk_text: string;
+  similarity: number;
+}
+
+export const searchApi = {
+  query: (token: string, repoId: string, q: string, limit = 10) =>
+    request<SearchResult[]>(
+      `/repos/${repoId}/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+      {},
+      token
+    ),
 };

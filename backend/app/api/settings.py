@@ -7,7 +7,14 @@ from backend.app.db import get_db
 from backend.app.models.user import User
 from backend.app.models.settings import UserSettings
 from backend.app.models.base import new_uuid
-from backend.app.schemas.settings import SavePatRequest, SettingsResponse
+from backend.app.schemas.settings import (
+    SavePatRequest,
+    SaveOpenAIKeyRequest,
+    SaveAPIBaseRequest,
+    SaveEmbeddingModelRequest,
+    SaveAnalysisModelRequest,
+    SettingsResponse,
+)
 from backend.app.services.encryption import encrypt, decrypt
 from backend.app.api.deps import get_current_user
 
@@ -31,7 +38,13 @@ async def get_settings(
 ):
     result = await db.execute(select(UserSettings).where(UserSettings.user_id == current_user.id))
     s = result.scalar_one_or_none()
-    return SettingsResponse(has_github_token=bool(s and s.github_token_encrypted))
+    return SettingsResponse(
+        has_github_token=bool(s and s.github_token_encrypted),
+        has_openai_key=bool(s and s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base if s else None,
+        embedding_model=s.embedding_model if s else None,
+        analysis_model=s.analysis_model if s else None,
+    )
 
 
 @router.put("/github-token", response_model=SettingsResponse)
@@ -61,7 +74,13 @@ async def save_github_token(
     s = await _get_or_create_settings(current_user.id, db)
     s.github_token_encrypted = encrypt(token)
     await db.commit()
-    return SettingsResponse(has_github_token=True)
+    return SettingsResponse(
+        has_github_token=True,
+        has_openai_key=bool(s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base,
+        embedding_model=s.embedding_model,
+        analysis_model=s.analysis_model,
+    )
 
 
 @router.delete("/github-token", response_model=SettingsResponse)
@@ -74,4 +93,114 @@ async def delete_github_token(
     if s:
         s.github_token_encrypted = None
         await db.commit()
-    return SettingsResponse(has_github_token=False)
+    return SettingsResponse(
+        has_github_token=False,
+        has_openai_key=bool(s and s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base if s else None,
+        embedding_model=s.embedding_model if s else None,
+        analysis_model=s.analysis_model if s else None,
+    )
+
+
+@router.put("/openai-key", response_model=SettingsResponse)
+async def save_openai_key(
+    body: SaveOpenAIKeyRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    key = body.openai_key.strip()
+    if not key.startswith("sk-"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid OpenAI API key format (must start with sk-)",
+        )
+
+    s = await _get_or_create_settings(current_user.id, db)
+    s.openai_token_encrypted = encrypt(key)
+    await db.commit()
+    return SettingsResponse(
+        has_github_token=bool(s.github_token_encrypted),
+        has_openai_key=True,
+        openai_api_base=s.openai_api_base,
+        embedding_model=s.embedding_model,
+        analysis_model=s.analysis_model,
+    )
+
+
+@router.delete("/openai-key", response_model=SettingsResponse)
+async def delete_openai_key(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(UserSettings).where(UserSettings.user_id == current_user.id))
+    s = result.scalar_one_or_none()
+    if s:
+        s.openai_token_encrypted = None
+        await db.commit()
+    return SettingsResponse(
+        has_github_token=bool(s and s.github_token_encrypted),
+        has_openai_key=False,
+        openai_api_base=s.openai_api_base if s else None,
+        embedding_model=s.embedding_model if s else None,
+        analysis_model=s.analysis_model if s else None,
+    )
+
+
+@router.put("/openai-api-base", response_model=SettingsResponse)
+async def save_api_base(
+    body: SaveAPIBaseRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    url = body.api_base.strip().rstrip("/")
+    if not url.startswith("http"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="API base URL must start with http:// or https://",
+        )
+    s = await _get_or_create_settings(current_user.id, db)
+    s.openai_api_base = url
+    await db.commit()
+    return SettingsResponse(
+        has_github_token=bool(s.github_token_encrypted),
+        has_openai_key=bool(s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base,
+        embedding_model=s.embedding_model,
+        analysis_model=s.analysis_model,
+    )
+
+
+@router.put("/embedding-model", response_model=SettingsResponse)
+async def save_embedding_model(
+    body: SaveEmbeddingModelRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    s = await _get_or_create_settings(current_user.id, db)
+    s.embedding_model = body.embedding_model.strip()
+    await db.commit()
+    return SettingsResponse(
+        has_github_token=bool(s.github_token_encrypted),
+        has_openai_key=bool(s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base,
+        embedding_model=s.embedding_model,
+        analysis_model=s.analysis_model,
+    )
+
+
+@router.put("/analysis-model", response_model=SettingsResponse)
+async def save_analysis_model(
+    body: SaveAnalysisModelRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    s = await _get_or_create_settings(current_user.id, db)
+    s.analysis_model = body.analysis_model.strip()
+    await db.commit()
+    return SettingsResponse(
+        has_github_token=bool(s.github_token_encrypted),
+        has_openai_key=bool(s.openai_token_encrypted),
+        openai_api_base=s.openai_api_base,
+        embedding_model=s.embedding_model,
+        analysis_model=s.analysis_model,
+    )

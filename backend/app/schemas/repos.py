@@ -16,6 +16,7 @@ class RepoOut(BaseModel):
     default_branch: str
     status: str
     error_msg: str | None
+    webhook_secret: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

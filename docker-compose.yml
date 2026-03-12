@@ -9,10 +9,15 @@ services:
       - ARMA_ENCRYPTION_KEY=${ARMA_ENCRYPTION_KEY:-}
       - ARMA_ENV=${ARMA_ENV:-development}
       - ARMA_CORS_ORIGINS=${ARMA_CORS_ORIGINS:-http://localhost:3000}
+      - ARMA_NEO4J_URL=bolt://neo4j:7687
+      - ARMA_NEO4J_USER=neo4j
+      - ARMA_NEO4J_PASSWORD=armapassword
     volumes:
       - repos_data:/app/repos
     depends_on:
       postgres:
+        condition: service_healthy
+      neo4j:
         condition: service_healthy
     restart: unless-stopped
     command: >
@@ -35,6 +40,25 @@ services:
       retries: 10
     restart: unless-stopped
 
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/armapassword
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   repos_data:
+  neo4j_data:

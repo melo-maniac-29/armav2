@@ -10,10 +10,14 @@ from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session
 
 from backend.app.config import get_settings
+from backend.app.core.git_ops import parse_git_log
+from backend.app.core.parser import parse_file
 from backend.app.models.base import new_uuid
+from backend.app.models.commit import Commit, CommitFile
 from backend.app.models.file import RepoFile
 from backend.app.models.repo import Repo
 from backend.app.models.settings import UserSettings
+from backend.app.models.symbol import Symbol
 from backend.app.services.encryption import decrypt
 
 # ── language detection ────────────────────────────────────────────────────────
@@ -38,6 +42,9 @@ EXT_LANG: dict[str, str] = {
 }
 
 MAX_FILE_BYTES = 1_048_576  # skip files > 1 MB
+
+# Extensions we'll run parser.parse_file on for symbol extraction
+PARSEABLE_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx"}
 
 
 def _detect_language(p: Path) -> str | None:
@@ -94,13 +101,13 @@ def clone_and_parse_sync(repo_id: str) -> None:
 
             # Try with explicit branch first, fall back to default
             result = subprocess.run(
-                ["git", "clone", "--depth=1", "--branch", repo.default_branch,
+                ["git", "clone", "--depth=200", "--branch", repo.default_branch,
                  auth_url, str(clone_path)],
                 capture_output=True, text=True, timeout=300,
             )
             if result.returncode != 0:
                 result = subprocess.run(
-                    ["git", "clone", "--depth=1", auth_url, str(clone_path)],
+                    ["git", "clone", "--depth=200", auth_url, str(clone_path)],
                     capture_output=True, text=True, timeout=300,
                 )
             if result.returncode != 0:
@@ -110,7 +117,8 @@ def clone_and_parse_sync(repo_id: str) -> None:
             # ── parse ──────────────────────────────────────────────────────────
             _set_status(session, "parsing")
 
-            # Remove stale file records
+            # Remove stale file records and symbols
+            session.execute(delete(Symbol).where(Symbol.repo_id == repo_id))
             session.execute(delete(RepoFile).where(RepoFile.repo_id == repo_id))
             session.flush()
 
@@ -137,6 +145,88 @@ def clone_and_parse_sync(repo_id: str) -> None:
                     continue
 
             session.add_all(files)
+            session.flush()  # so file IDs are available for FK references
+
+            # ── symbol extraction ──────────────────────────────────────────────
+            path_to_file_id = {f.path: f.id for f in files}
+            symbols: list[Symbol] = []
+            for f in files:
+                if f.language is None:
+                    continue
+                fp = clone_path / f.path
+                if fp.suffix.lower() not in PARSEABLE_EXTENSIONS:
+                    continue
+                try:
+                    content = fp.read_text(errors="replace")
+                except Exception:
+                    continue
+                if not content.strip():
+                    continue
+
+                parsed = parse_file(fp, content)
+                for sym in parsed.symbols:
+                    symbols.append(Symbol(
+                        id=new_uuid(),
+                        repo_id=repo_id,
+                        file_id=f.id,
+                        kind=sym.kind,
+                        name=sym.name,
+                        start_line=sym.start_line,
+                        end_line=sym.end_line,
+                        signature=sym.signature,
+                        docstring=(sym.docstring or "")[:500] if sym.docstring else None,
+                        calls=",".join(sym.calls[:50]) if sym.calls else None,
+                        imports=",".join(sym.imports[:50]) if sym.imports else None,
+                    ))
+
+            if symbols:
+                session.add_all(symbols)
+
+            # ── commit history ─────────────────────────────────────────────────
+            _set_status(session, "indexing")
+
+            # Clear stale commit data
+            from sqlalchemy import delete as sa_delete
+            session.execute(
+                sa_delete(CommitFile).where(
+                    CommitFile.commit_id.in_(
+                        session.scalars(
+                            select(Commit.id).where(Commit.repo_id == repo_id)
+                        ).all()
+                    )
+                )
+            )
+            session.execute(sa_delete(Commit).where(Commit.repo_id == repo_id))
+            session.flush()
+
+            commit_records = parse_git_log(clone_path, max_commits=500)
+            for cr in commit_records:
+                commit_row = Commit(
+                    id=new_uuid(),
+                    repo_id=repo_id,
+                    hash=cr.hash,
+                    author_name=cr.author_name,
+                    author_email=cr.author_email,
+                    committed_at=cr.committed_at,
+                    message=cr.message,
+                    is_bug_fix=cr.is_bug_fix,
+                    additions=cr.additions,
+                    deletions=cr.deletions,
+                    files_changed=cr.files_changed,
+                )
+                session.add(commit_row)
+                session.flush()  # get commit_row.id
+
+                for fr in cr.files:
+                    session.add(CommitFile(
+                        id=new_uuid(),
+                        commit_id=commit_row.id,
+                        file_path=fr.path,
+                        change_type=fr.change_type,
+                        additions=fr.additions,
+                        deletions=fr.deletions,
+                    ))
+
             _set_status(session, "ready")
 
     except Exception as exc:

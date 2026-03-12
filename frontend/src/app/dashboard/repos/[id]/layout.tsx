@@ -17,6 +17,8 @@ const STATUS_STYLE: Record<string, string> = {
 const TABS = [
   { label: "Overview", segment: "" },
   { label: "Files",    segment: "files" },
+  { label: "Issues",   segment: "issues" },
+  { label: "Search",   segment: "search" },
 ];
 
 export default function RepoLayout({

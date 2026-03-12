@@ -13,3 +13,5 @@ cryptography==44.0.3
 httpx==0.28.1
 structlog==25.4.0
 python-multipart==0.0.20
+openai>=1.58.0
+neo4j>=5.0.0

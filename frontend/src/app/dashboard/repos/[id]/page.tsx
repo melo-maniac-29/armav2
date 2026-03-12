@@ -108,6 +108,32 @@ export default function RepoOverviewPage({ params }: { params: Promise<{ id: str
           </ul>
         )}
       </div>
+
+      {/* Webhook setup */}
+      {repo.webhook_secret && (
+        <div className="sm:col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Webhook Setup</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Add this webhook to your GitHub repo (Settings → Webhooks → Add webhook) to trigger automatic
+            analysis on every push.
+          </p>
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Payload URL</p>
+              <code className="block bg-gray-800 rounded px-3 py-2 text-xs text-indigo-300 select-all break-all">
+                http://localhost:8000/webhooks/github
+              </code>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Secret</p>
+              <code className="block bg-gray-800 rounded px-3 py-2 text-xs text-indigo-300 select-all break-all">
+                {repo.webhook_secret}
+              </code>
+            </div>
+            <p className="text-xs text-gray-600">Content type: <span className="text-gray-500">application/json</span> · Events: <span className="text-gray-500">Just the push event</span></p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

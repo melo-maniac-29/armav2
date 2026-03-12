@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     # encrypted tokens remain decryptable across deployments.
     encryption_key: str = ""
 
+    # Neo4j
+    neo4j_url: str = "bolt://neo4j:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "armapassword"
+
+    # Embedding vector dimension — must match the model you use.
+    # Change before running the first migration if your model outputs a different size.
+    embedding_dim: int = 1536
+
     # App
     env: str = "development"
     cors_origins: str = "http://localhost:3000"
