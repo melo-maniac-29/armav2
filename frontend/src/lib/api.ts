@@ -334,3 +334,77 @@ export const searchApi = {
       token
     ),
 };
+
+// --- Commits ---
+export interface CommitOut {
+  id: string;
+  hash: string;
+  author_name: string | null;
+  author_email: string | null;
+  committed_at: string | null;
+  message: string | null;
+  is_bug_fix: boolean;
+  additions: number;
+  deletions: number;
+  files_changed: number;
+}
+
+export interface CommitListResponse {
+  commits: CommitOut[];
+  total: number;
+}
+
+export interface HotspotOut {
+  file_path: string;
+  churn: number;
+  commit_count: number;
+}
+
+export const commitsApi = {
+  list: (token: string, repoId: string, limit = 50, offset = 0) =>
+    request<CommitListResponse>(
+      `/repos/${repoId}/commits?limit=${limit}&offset=${offset}`,
+      {},
+      token
+    ),
+
+  hotspots: (token: string, repoId: string, limit = 20) =>
+    request<{ hotspots: HotspotOut[] }>(
+      `/repos/${repoId}/commits/hotspots?limit=${limit}`,
+      {},
+      token
+    ),
+};
+
+// --- Health ---
+export interface WeeklyBucket {
+  week: string;
+  commits: number;
+  bug_fixes: number;
+}
+
+export interface HealthHotspot {
+  file_path: string;
+  churn: number;
+  commit_count: number;
+  open_issues: number;
+}
+
+export interface HealthResponse {
+  total_commits: number;
+  bug_fix_commits: number;
+  bug_fix_rate: number;
+  weekly_velocity: WeeklyBucket[];
+  open_issues: number;
+  critical_issues: number;
+  risk_score: number;
+  hotspots: HealthHotspot[];
+  symbols_indexed: number;
+  embeddings_indexed: number;
+  files_indexed: number;
+}
+
+export const healthApi = {
+  get: (token: string, repoId: string) =>
+    request<HealthResponse>(`/repos/${repoId}/health`, {}, token),
+};

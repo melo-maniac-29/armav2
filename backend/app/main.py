@@ -16,6 +16,8 @@ from backend.app.api import webhooks as webhooks_router
 from backend.app.api import pr_jobs as pr_jobs_router
 from backend.app.api import feature_requests as feature_requests_router
 from backend.app.api import dashboard as dashboard_router
+from backend.app.api import commits as commits_router
+from backend.app.api import health as health_router
 
 settings = get_settings()
 
@@ -45,6 +47,8 @@ app.include_router(pr_jobs_router.router, prefix="/repos", tags=["pr-jobs"])
 app.include_router(feature_requests_router.router, prefix="/repos", tags=["feature-requests"])
 app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(dashboard_router.router, prefix="/dashboard", tags=["dashboard"])
+app.include_router(commits_router.router, prefix="/repos", tags=["commits"])
+app.include_router(health_router.router, prefix="/repos", tags=["health"])
 
 
 @app.get("/health")

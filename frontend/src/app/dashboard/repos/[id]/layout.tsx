@@ -18,6 +18,8 @@ const TABS = [
   { label: "Overview", segment: "" },
   { label: "Files",    segment: "files" },
   { label: "Issues",   segment: "issues" },
+  { label: "Commits",  segment: "commits" },
+  { label: "Health",   segment: "health" },
   { label: "Fixes",    segment: "fixes" },
   { label: "Features", segment: "features" },
   { label: "Search",   segment: "search" },
