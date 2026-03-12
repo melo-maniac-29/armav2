@@ -1,7 +1,10 @@
 import asyncio
+import logging
 import secrets
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,16 +67,16 @@ async def _full_pipeline(repo_id: str, user_id: str) -> None:
             ]
 
             await embed_repo(repo_id, user_id, db)
-    except Exception:
-        pass  # embedding failure is non-fatal
+    except Exception as e:
+        logger.warning("[pipeline] embed_repo failed for %s: %s", repo_id, e)  # non-fatal
 
     # Step 3 — async Neo4j graph build + commit co-changes
     try:
         async with AsyncSessionLocal() as db:
             await build_repo_graph(repo_id, symbols_data, files_data)
             await build_co_change_graph(repo_id, db)
-    except Exception:
-        pass  # graph build failure is non-fatal
+    except Exception as e:
+        logger.warning("[pipeline] graph build failed for %s: %s", repo_id, e)  # non-fatal
 
 
 @router.post("", response_model=RepoOut, status_code=status.HTTP_201_CREATED)
