@@ -55,3 +55,28 @@ class PrJobOut(BaseModel):
 class PrJobListResponse(BaseModel):
     jobs: list[PrJobOut]
     total: int
+
+
+class FeatureRequestOut(BaseModel):
+    id: str
+    repo_id: str
+    user_id: str
+    description: str
+    branch_name: str | None
+    plan_json: str | None
+    patches_json: str | None
+    status: str
+    error_msg: str | None
+    sandbox_log: str | None
+    sandbox_result: str | None
+    github_pr_number: int | None
+    github_pr_url: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FeatureRequestListResponse(BaseModel):
+    requests: list[FeatureRequestOut]
+    total: int

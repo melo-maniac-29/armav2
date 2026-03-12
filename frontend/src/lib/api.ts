@@ -259,6 +259,45 @@ export const prJobsApi = {
     request<PrJobOut>(`/repos/${repoId}/pr-jobs/${jobId}`, {}, token),
 };
 
+// --- Feature Requests ---
+export interface FeatureRequestOut {
+  id: string;
+  repo_id: string;
+  user_id: string;
+  description: string;
+  branch_name: string | null;
+  plan_json: string | null;
+  patches_json: string | null;
+  status: "pending" | "planning" | "coding" | "sandboxing" | "pushing" | "pr_opened" | "failed";
+  error_msg: string | null;
+  sandbox_log: string | null;
+  sandbox_result: "passed" | "failed" | "skipped" | null;
+  github_pr_number: number | null;
+  github_pr_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureRequestListResponse {
+  requests: FeatureRequestOut[];
+  total: number;
+}
+
+export const featureRequestsApi = {
+  list: (token: string, repoId: string) =>
+    request<FeatureRequestListResponse>(`/repos/${repoId}/feature-requests`, {}, token),
+
+  get: (token: string, repoId: string, frId: string) =>
+    request<FeatureRequestOut>(`/repos/${repoId}/feature-requests/${frId}`, {}, token),
+
+  create: (token: string, repoId: string, description: string) =>
+    request<FeatureRequestOut>(
+      `/repos/${repoId}/feature-requests`,
+      { method: "POST", body: JSON.stringify({ description }) },
+      token,
+    ),
+};
+
 // --- Search ---
 export interface SearchResult {
   file_path: string;

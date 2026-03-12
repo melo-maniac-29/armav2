@@ -10,6 +10,7 @@ from backend.app.api import analysis as analysis_router
 from backend.app.api import search as search_router
 from backend.app.api import webhooks as webhooks_router
 from backend.app.api import pr_jobs as pr_jobs_router
+from backend.app.api import feature_requests as feature_requests_router
 
 settings = get_settings()
 
@@ -36,6 +37,7 @@ app.include_router(repos_router.router, prefix="/repos", tags=["repos"])
 app.include_router(analysis_router.router, prefix="/repos", tags=["analysis"])
 app.include_router(search_router.router, prefix="/repos", tags=["search"])
 app.include_router(pr_jobs_router.router, prefix="/repos", tags=["pr-jobs"])
+app.include_router(feature_requests_router.router, prefix="/repos", tags=["feature-requests"])
 app.include_router(webhooks_router.router, prefix="/webhooks", tags=["webhooks"])
 
 

@@ -19,6 +19,7 @@ const TABS = [
   { label: "Files",    segment: "files" },
   { label: "Issues",   segment: "issues" },
   { label: "Fixes",    segment: "fixes" },
+  { label: "Features", segment: "features" },
   { label: "Search",   segment: "search" },
 ];
 
