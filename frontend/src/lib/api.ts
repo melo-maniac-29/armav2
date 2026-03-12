@@ -374,6 +374,13 @@ export const commitsApi = {
       {},
       token
     ),
+
+  reindex: (token: string, repoId: string) =>
+    request<{ commits_indexed: number; message: string }>(
+      `/repos/${repoId}/reindex-commits`,
+      { method: "POST" },
+      token
+    ),
 };
 
 // --- Health ---

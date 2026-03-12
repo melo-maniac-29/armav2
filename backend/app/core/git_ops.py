@@ -60,21 +60,21 @@ class CommitRecord:
 
 def parse_git_log(repo_path: Path, max_commits: int = 500) -> list[CommitRecord]:
     """
-    Run ``git log --name-status`` on a local clone and return structured
-    CommitRecord objects.
+    Run ``git log --numstat`` on a local clone and return structured
+    CommitRecord objects with accurate additions/deletions counts.
 
     Format chosen:
       --pretty=tformat:COMMIT|%H|%an|%ae|%ct|%s
-        → one line per commit, | is rare enough in hash/email/timestamp
-      --name-status
-        → lines like: M\tpath.py  A\tnew.py  D\told.py  R100\told\tnew
-      Blank lines separate commits — we simply skip them.
+        → one line per commit
+      --numstat
+        → lines like: 5\t3\tpath.py   (additions, deletions, path)
+        → binary files show: -\t-\tpath.bin  (treated as 0/0)
     """
     result = subprocess.run(
         [
             "git", "log", f"-{max_commits}",
             "--pretty=tformat:COMMIT|%H|%an|%ae|%ct|%s",
-            "--name-status",
+            "--numstat",
         ],
         capture_output=True,
         text=True,
@@ -121,27 +121,31 @@ def parse_git_log(repo_path: Path, max_commits: int = 500) -> list[CommitRecord]
             )
 
         elif current is not None and "\t" in line:
-            # name-status line:
-            #   M\tpath.py
-            #   A\tnew_file.py
-            #   D\tgone.py
-            #   R100\told_name.py\tnew_name.py  (rename)
-            #   C75\tsrc.py\tdst.py             (copy)
-            parts = line.split("\t")
-            status = parts[0]
+            # numstat format: additions\tdeletions\tfilepath
+            # Binary files show: -\t-\tfilepath
+            parts = line.split("\t", 2)
+            if len(parts) < 3:
+                continue
 
-            if status.startswith("R") or status.startswith("C"):
-                # Rename/copy: use destination path
-                fpath = parts[2] if len(parts) >= 3 else (parts[1] if len(parts) >= 2 else "")
-                change_type = "modified"
-            elif status.startswith("A"):
-                fpath = parts[1] if len(parts) >= 2 else ""
+            add_str, del_str, fpath = parts
+            fpath = fpath.strip()
+
+            # Handle binary files (show "-") and parse counts
+            try:
+                additions = int(add_str) if add_str != "-" else 0
+            except ValueError:
+                additions = 0
+            try:
+                deletions = int(del_str) if del_str != "-" else 0
+            except ValueError:
+                deletions = 0
+
+            # Infer change type from counts
+            if additions > 0 and deletions == 0:
                 change_type = "added"
-            elif status.startswith("D"):
-                fpath = parts[1] if len(parts) >= 2 else ""
+            elif additions == 0 and deletions > 0:
                 change_type = "deleted"
             else:
-                fpath = parts[1] if len(parts) >= 2 else ""
                 change_type = "modified"
 
             if fpath:
@@ -149,6 +153,8 @@ def parse_git_log(repo_path: Path, max_commits: int = 500) -> list[CommitRecord]
                     FileRecord(
                         path=fpath,
                         change_type=change_type,
+                        additions=additions,
+                        deletions=deletions,
                     )
                 )
 

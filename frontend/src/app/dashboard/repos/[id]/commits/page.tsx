@@ -11,22 +11,47 @@ export default function CommitsPage({ params }: { params: Promise<{ id: string }
   const [hotspots, setHotspots] = useState<HotspotOut[]>([]);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [reindexing, setReindexing] = useState(false);
+  const [reindexMsg, setReindexMsg] = useState<string | null>(null);
   const limit = 30;
 
-  useEffect(() => {
+  async function load(currentOffset = offset) {
     const token = tokenStore.getAccess();
     if (!token) return;
     setLoading(true);
-    Promise.all([
-      commitsApi.list(token, id, limit, offset),
-      offset === 0 ? commitsApi.hotspots(token, id, 10) : Promise.resolve(null),
-    ]).then(([listRes, hotRes]) => {
+    try {
+      const [listRes, hotRes] = await Promise.all([
+        commitsApi.list(token, id, limit, currentOffset),
+        currentOffset === 0 ? commitsApi.hotspots(token, id, 10) : Promise.resolve(null),
+      ]);
       setCommits(listRes.commits);
       setTotal(listRes.total);
       if (hotRes) setHotspots(hotRes.hotspots);
-    }).catch(console.error)
-      .finally(() => setLoading(false));
-  }, [id, offset]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [id, offset]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleReindex() {
+    const token = tokenStore.getAccess();
+    if (!token) return;
+    setReindexing(true);
+    setReindexMsg(null);
+    try {
+      const res = await commitsApi.reindex(token, id);
+      setReindexMsg(res.message);
+      setOffset(0);
+      await load(0);
+    } catch (e: unknown) {
+      setReindexMsg(e instanceof Error ? e.message : "Reindex failed.");
+    } finally {
+      setReindexing(false);
+    }
+  }
 
   const fmt = (iso: string | null) => {
     if (!iso) return "—";
@@ -40,9 +65,29 @@ export default function CommitsPage({ params }: { params: Promise<{ id: string }
       {/* Commit list */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Commit History</h2>
-          <span className="text-sm text-gray-400">{total} total commits</span>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Commit History</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Each fix/feature creates a GitHub PR — ARMA never pushes directly to your default branch.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-400">{total} total commits</span>
+            <button
+              onClick={handleReindex}
+              disabled={reindexing}
+              className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-50 transition border border-gray-700"
+            >
+              {reindexing ? "Re-indexing…" : "⟳ Re-index"}
+            </button>
+          </div>
         </div>
+
+        {reindexMsg && (
+          <div className="mb-3 text-xs rounded-lg px-3 py-2 border border-green-700 bg-green-900/30 text-green-300">
+            {reindexMsg}
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-2">
