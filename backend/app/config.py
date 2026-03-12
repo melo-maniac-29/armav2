@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     neo4j_password: str = "armapassword"
 
     # Embedding vector dimension — must match the model you use.
-    # Change before running the first migration if your model outputs a different size.
-    embedding_dim: int = 1536
+    # nomic-embed-text-v1.5 = 768, text-embedding-ada-002 = 1536
+    embedding_dim: int = 768
 
     # App
     env: str = "development"

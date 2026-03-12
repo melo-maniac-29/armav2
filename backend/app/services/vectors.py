@@ -83,9 +83,9 @@ async def embed_repo(repo_id: str, user_id: str, db: AsyncSession) -> None:
 
     repo_dir = Path("repos") / repo_id
 
-    # Clear old embeddings for this repo
+    # Clear old embeddings for this repo (commit immediately so concurrent pipelines see the delete)
     await db.execute(delete(CodeEmbedding).where(CodeEmbedding.repo_id == repo_id))
-    await db.flush()
+    await db.commit()
 
     # Collect (text, metadata) pairs to embed
     pending: list[tuple[str, dict]] = []
