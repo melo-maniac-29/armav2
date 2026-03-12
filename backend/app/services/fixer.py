@@ -16,6 +16,7 @@ from backend.app.models.embedding import CodeEmbedding
 from backend.app.models.issue import Issue
 from backend.app.models.settings import UserSettings
 from backend.app.services.encryption import decrypt
+from backend.app.services.graph import get_related_files
 from backend.app.services.vectors import _embed_batch
 
 
@@ -78,6 +79,17 @@ async def generate_fix(
         issue.description, user_id, repo_id, issue.file_path, db, us, client
     )
 
+    # Fetch graph context: files related via IMPORTS / CO_CHANGES_WITH edges
+    graph_snippets = await _get_graph_context(repo_id, issue.file_path, repo_dir)
+
+    # Merge: graph first (structural), then vector (semantic), deduplicate by name
+    seen: set[str] = {issue.file_path}
+    merged: list[tuple[str, str]] = []
+    for name, text in graph_snippets + context_snippets:
+        if name not in seen:
+            seen.add(name)
+            merged.append((name, text))
+
     # Build user message
     issue_block = (
         f"File: {issue.file_path}\n"
@@ -89,9 +101,9 @@ async def generate_fix(
     )
 
     context_block = ""
-    if context_snippets:
+    if merged:
         context_block = "\n\n--- Related context ---\n" + "\n\n".join(
-            f"// {name}\n{text[:1500]}" for name, text in context_snippets
+            f"// {name}\n{text[:1500]}" for name, text in merged
         )
 
     user_message = (
@@ -102,7 +114,6 @@ async def generate_fix(
 
     resp = await client.chat.completions.create(
         model=model,
-        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
@@ -112,7 +123,13 @@ async def generate_fix(
     )
 
     raw = resp.choices[0].message.content
-    data = json.loads(raw)
+    if not raw or not raw.strip():
+        raise ValueError("LLM returned empty response. Check your API key / chat proxy.")
+    # Strip markdown code fences if present
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    data = json.loads(text)
     fixed_content = data.get("fixed_content", "")
     explanation = data.get("explanation", "")
 
@@ -164,3 +181,29 @@ async def _get_context(
         return [(r[0], r[1]) for r in rows]
     except Exception:
         return []
+
+
+async def _get_graph_context(
+    repo_id: str,
+    file_path: str,
+    repo_dir: Path,
+) -> list[tuple[str, str]]:
+    """
+    Use Neo4j to find files related via IMPORTS / CO_CHANGES_WITH edges,
+    then read their content from disk. Returns up to 3 (name, text) pairs.
+    """
+    try:
+        related_paths = await get_related_files(repo_id, file_path, depth=2)
+    except Exception:
+        return []
+
+    snippets: list[tuple[str, str]] = []
+    for rel_path in related_paths[:3]:
+        abs_path = repo_dir / rel_path
+        if abs_path.exists():
+            try:
+                text = abs_path.read_text(errors="replace")
+                snippets.append((rel_path, text))
+            except Exception:
+                continue
+    return snippets

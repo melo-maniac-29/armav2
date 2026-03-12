@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.settings import UserSettings
 from backend.app.services.encryption import decrypt
+from backend.app.services.graph import get_related_files
 from backend.app.services.vectors import _embed_batch
 
 
@@ -79,8 +80,20 @@ async def generate_code(
         except Exception:
             current_content = ""
 
-        # Fetch semantic context, excluding the target file
-        context = await _get_code_context(task_desc, repo_id, file_path, db, us, client)
+        # Fetch vector context (semantic similarity)
+        vector_ctx = await _get_code_context(task_desc, repo_id, file_path, db, us, client)
+
+        # Fetch graph context (IMPORTS / CO_CHANGES_WITH neighbors from Neo4j)
+        graph_ctx = await _get_graph_context(repo_id, file_path, repo_dir)
+
+        # Merge: graph first (structural), then vector (semantic), deduplicate
+        seen: set[str] = {file_path}
+        context: list[tuple[str, str]] = []
+        for name, text in graph_ctx + vector_ctx:
+            if name not in seen:
+                seen.add(name)
+                context.append((name, text))
+
         context_block = ""
         if context:
             context_block = "\n\nRelated code for reference:\n" + "\n\n".join(
@@ -96,7 +109,6 @@ async def generate_code(
 
         resp = await client.chat.completions.create(
             model=model,
-            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": CODER_SYSTEM},
                 {"role": "user", "content": user_msg},
@@ -106,7 +118,12 @@ async def generate_code(
         )
 
         raw = resp.choices[0].message.content
-        data = json.loads(raw)
+        if not raw or not raw.strip():
+            raise ValueError("LLM returned empty response. Check your API key / chat proxy.")
+        text = raw.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        data = json.loads(text)
         new_content = data.get("new_content", "")
 
         if not new_content or not new_content.strip():
@@ -157,3 +174,26 @@ async def _get_code_context(
         return [(r[0], r[1]) for r in rows]
     except Exception:
         return []
+
+
+async def _get_graph_context(
+    repo_id: str,
+    file_path: str,
+    repo_dir: Path,
+) -> list[tuple[str, str]]:
+    """Return up to 3 (name, text) pairs from graph-adjacent files (IMPORTS + CO_CHANGES_WITH)."""
+    try:
+        related_paths = await get_related_files(repo_id, file_path, depth=2)
+    except Exception:
+        return []
+
+    snippets: list[tuple[str, str]] = []
+    for rel_path in related_paths[:3]:
+        abs_path = repo_dir / rel_path
+        if abs_path.exists():
+            try:
+                text = abs_path.read_text(errors="replace")
+                snippets.append((rel_path, text))
+            except Exception:
+                continue
+    return snippets

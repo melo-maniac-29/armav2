@@ -86,7 +86,6 @@ async def generate_plan(
 
     resp = await client.chat.completions.create(
         model=model,
-        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": PLANNER_SYSTEM},
             {"role": "user", "content": user_message},
@@ -96,7 +95,12 @@ async def generate_plan(
     )
 
     raw = resp.choices[0].message.content
-    data = json.loads(raw)
+    if not raw or not raw.strip():
+        raise ValueError("LLM returned empty response. Check your API key / chat proxy.")
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    data = json.loads(text)
 
     # Accept {"plan": [...]} or direct list
     if isinstance(data, list):

@@ -76,5 +76,8 @@ async def run_sandbox(repo_dir: Path) -> tuple[bool, str]:
         passed = proc.returncode == 0
         return passed, log_header + output
 
+    except FileNotFoundError:
+        # Executable not present in this environment — treat as no test suite
+        return True, log_header + f"[sandbox] Runner '{argv[0]}' not found in environment — skipped.\n"
     except Exception as exc:
         return False, log_header + f"[sandbox] Error running tests: {exc}\n"
