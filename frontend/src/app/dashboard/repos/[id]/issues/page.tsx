@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { tokenStore } from "@/lib/auth";
 import { issuesApi, IssueOut, IssueListResponse, ApiError } from "@/lib/api";
 
@@ -24,6 +24,7 @@ export default function IssuesPage() {
   const params = useParams<{ id: string }>();
   const repoId = params?.id ?? "";
 
+  const router = useRouter();
   const [data, setData] = useState<IssueListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -31,6 +32,8 @@ export default function IssuesPage() {
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("open");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [fixingId, setFixingId] = useState<string | null>(null);
+  const [fixError, setFixError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!repoId) return;
@@ -88,6 +91,19 @@ export default function IssuesPage() {
     } catch { /* ignore */ }
   }
 
+  async function handleFix(issue: IssueOut) {
+    setFixError(null);
+    setFixingId(issue.id);
+    try {
+      const access = tokenStore.getAccess()!;
+      await issuesApi.fix(access, repoId, issue.id);
+      router.push(`/dashboard/repos/${repoId}/fixes`);
+    } catch (err) {
+      setFixError(err instanceof ApiError ? err.message : "Failed to start fix.");
+      setFixingId(null);
+    }
+  }
+
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -142,6 +158,9 @@ export default function IssuesPage() {
 
       {analyzeError && (
         <p className="text-sm text-red-400 mb-4">{analyzeError}</p>
+      )}
+      {fixError && (
+        <p className="text-sm text-red-400 mb-4">{fixError}</p>
       )}
 
       {/* Filters */}
@@ -221,12 +240,26 @@ export default function IssuesPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleDismiss(issue)}
-                    className="flex-shrink-0 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    {issue.status === "dismissed" ? "Reopen" : "Dismiss"}
-                  </button>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {issue.status === "open" && (
+                      <button
+                        onClick={() => handleFix(issue)}
+                        disabled={fixingId === issue.id}
+                        className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60 text-white font-medium px-2.5 py-1 rounded transition-colors"
+                      >
+                        {fixingId === issue.id ? "Starting…" : "Auto Fix"}
+                      </button>
+                    )}
+                    {issue.status === "fixed" && (
+                      <span className="text-xs text-emerald-400 font-medium">✓ Fixed</span>
+                    )}
+                    <button
+                      onClick={() => handleDismiss(issue)}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      {issue.status === "dismissed" ? "Reopen" : issue.status === "fixed" ? "" : "Dismiss"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );

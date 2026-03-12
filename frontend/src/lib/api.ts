@@ -224,6 +224,39 @@ export const issuesApi = {
       { method: "PATCH", body: JSON.stringify({ status: issueStatus }) },
       token
     ),
+
+  fix: (token: string, repoId: string, issueId: string) =>
+    request<PrJobOut>(`/repos/${repoId}/issues/${issueId}/fix`, { method: "POST" }, token),
+};
+
+// --- PR Jobs ---
+export interface PrJobOut {
+  id: string;
+  repo_id: string;
+  issue_id: string;
+  branch_name: string | null;
+  patch_text: string | null;
+  status: "pending" | "generating" | "sandboxing" | "pushing" | "pr_opened" | "failed";
+  error_msg: string | null;
+  sandbox_log: string | null;
+  sandbox_result: "passed" | "failed" | "skipped" | null;
+  github_pr_number: number | null;
+  github_pr_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrJobListResponse {
+  jobs: PrJobOut[];
+  total: number;
+}
+
+export const prJobsApi = {
+  list: (token: string, repoId: string) =>
+    request<PrJobListResponse>(`/repos/${repoId}/pr-jobs`, {}, token),
+
+  get: (token: string, repoId: string, jobId: string) =>
+    request<PrJobOut>(`/repos/${repoId}/pr-jobs/${jobId}`, {}, token),
 };
 
 // --- Search ---

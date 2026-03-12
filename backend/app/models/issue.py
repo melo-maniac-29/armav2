@@ -23,5 +23,5 @@ class Issue(Base, TimestampMixin):
     issue_type: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    # open | dismissed
+    # open | dismissed | fixed
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")

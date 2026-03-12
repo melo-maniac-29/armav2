@@ -32,3 +32,26 @@ class IssueListResponse(BaseModel):
     issues: list[IssueOut]
     total: int
     by_severity: dict[str, int]
+
+
+class PrJobOut(BaseModel):
+    id: str
+    repo_id: str
+    issue_id: str
+    branch_name: str | None
+    patch_text: str | None
+    status: str
+    error_msg: str | None
+    sandbox_log: str | None
+    sandbox_result: str | None
+    github_pr_number: int | None
+    github_pr_url: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PrJobListResponse(BaseModel):
+    jobs: list[PrJobOut]
+    total: int
