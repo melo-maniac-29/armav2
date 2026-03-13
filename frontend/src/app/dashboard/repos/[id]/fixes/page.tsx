@@ -6,19 +6,19 @@ import { tokenStore } from "@/lib/auth";
 import { prJobsApi, PrJobOut, PrJobListResponse } from "@/lib/api";
 
 const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
-  pending:    { badge: "bg-gray-700 text-gray-400 border-gray-600",       label: "Pending" },
-  generating: { badge: "bg-blue-900/50 text-blue-300 border-blue-700",    label: "Generating" },
-  sandboxing: { badge: "bg-yellow-900/50 text-yellow-300 border-yellow-700", label: "Sandboxing" },
-  pushing:    { badge: "bg-indigo-900/50 text-indigo-300 border-indigo-700", label: "Pushing" },
-  pr_opened:  { badge: "bg-green-900/50 text-green-300 border-green-700",   label: "PR Opened" },
-  merged:     { badge: "bg-purple-900/50 text-purple-300 border-purple-700", label: "Merged ✓" },
-  failed:     { badge: "bg-red-900/50 text-red-300 border-red-700",         label: "Failed" },
+  pending:    { badge: "bg-[#F9F9F9] text-black/40 border-black/10",       label: "Queued" },
+  generating: { badge: "bg-blue-50 text-blue-600 border-blue-200",    label: "Synthesizing" },
+  sandboxing: { badge: "bg-amber-50 text-amber-600 border-amber-200", label: "Sandboxing" },
+  pushing:    { badge: "bg-indigo-50 text-indigo-600 border-indigo-200", label: "Pushing" },
+  pr_opened:  { badge: "bg-emerald-50 text-emerald-600 border-emerald-200",   label: "PR Active" },
+  merged:     { badge: "bg-purple-50 text-purple-600 border-purple-200", label: "Merged" },
+  failed:     { badge: "bg-red-50 text-red-600 border-red-200",         label: "Failed" },
 };
 
 const SANDBOX_STYLE: Record<string, string> = {
-  passed:  "text-green-400",
-  failed:  "text-red-400",
-  skipped: "text-gray-400",
+  passed:  "text-emerald-600",
+  failed:  "text-red-600",
+  skipped: "text-black/40",
 };
 
 const ACTIVE_STATUSES = new Set(["pending", "generating", "sandboxing", "pushing"]);
@@ -68,37 +68,36 @@ export default function FixesPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="font-sans space-y-12">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-8 border-b border-black/10 gap-6">
         <div>
-          <h2 className="text-lg font-semibold text-white">Auto-Fix Jobs</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            ARMA-generated fixes — each job creates a GitHub PR.
-          </p>
+           <h2 className="text-2xl font-medium text-black tracking-tight mb-2">AUTONOMOUS REMEDIATION.</h2>
+           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
+             Monitoring active patch synthesis & sandbox execution
+           </p>
         </div>
         <button
           onClick={load}
-          className="text-xs text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 bg-white border border-black/10 hover:border-black text-black text-[10px] uppercase font-bold tracking-[0.2em] px-6 py-3 transition-all shrink-0 shadow-sm"
         >
-          ↺ Refresh
+          <span className="font-mono text-black/40 rotate-180">↻</span> Synchronize
         </button>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-800 rounded-xl animate-pulse" />
+            <div key={i} className="h-32 bg-white border border-black/5 shadow-sm animate-pulse" />
           ))}
         </div>
       ) : !data || data.jobs.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-gray-400 text-sm">
-            No fix jobs yet. Go to <strong>Issues</strong> and click{" "}
-            <span className="text-emerald-400">Auto Fix</span> on any open issue.
+        <div className="text-center py-32 bg-white border border-dashed border-black/10">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 leading-relaxed max-w-sm mx-auto">
+            Zero remediation pipelines active. Initiate a sequence from the Diagnostic Nodes panel.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {data.jobs.map((job) => {
             const st = STATUS_STYLE[job.status] ?? STATUS_STYLE.pending;
             const isActive = ACTIVE_STATUSES.has(job.status);
@@ -107,80 +106,94 @@ export default function FixesPage() {
             return (
               <div
                 key={job.id}
-                className="rounded-xl border border-gray-700 bg-gray-800/50 p-4"
+                className="bg-white border border-black/10 shadow-sm p-6 hover:border-black transition-colors"
               >
-                <div className="flex items-start gap-3">
-                  {/* Status badge */}
-                  <span
-                    className={`flex-shrink-0 inline-flex items-center gap-1.5 border rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.badge}`}
-                  >
-                    {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                    )}
-                    {st.label}
-                  </span>
+                <div className="flex flex-col md:flex-row md:items-start gap-6">
+                  {/* Status indicator */}
+                  <div className="shrink-0 w-32 flex flex-col gap-2">
+                     <span
+                       className={`inline-flex items-center justify-center gap-2 border w-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${st.badge}`}
+                     >
+                       {isActive && (
+                         <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                       )}
+                       {st.label}
+                     </span>
+                     {job.sandbox_result && (
+                       <span className={`text-[9px] font-bold text-center uppercase tracking-[0.2em] bg-[#F9F9F9] border border-black/5 px-2 py-1 ${SANDBOX_STYLE[job.sandbox_result] ?? ""}`}>
+                         TEST: {job.sandbox_result}
+                       </span>
+                     )}
+                  </div>
 
                   <div className="flex-1 min-w-0">
-                    {/* Branch name */}
-                    <p className="text-sm font-medium text-gray-100 font-mono truncate">
+                    <p className="text-sm font-medium text-black tracking-tight mb-3 font-mono">
                       {job.branch_name ?? "—"}
                     </p>
 
-                    {/* Meta row */}
-                    <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
-                      <span>Issue: {job.issue_id.slice(0, 8)}</span>
-                      {job.sandbox_result && (
-                        <span className={SANDBOX_STYLE[job.sandbox_result] ?? ""}>
-                          Tests: {job.sandbox_result}
-                        </span>
-                      )}
-                      <span>{new Date(job.created_at).toLocaleString()}</span>
+                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-[0.1em] text-black/40 bg-[#F9F9F9] border border-black/5 p-3">
+                      <div className="flex items-center gap-2">
+                         <span className="text-black/30">LIFECYCLE</span>
+                         <span className="font-mono text-black">{new Date(job.created_at).toLocaleString()}</span>
+                      </div>
+                      <div className="w-px h-3 bg-black/10 hidden sm:block" />
+                      <div className="flex items-center gap-2">
+                         <span className="text-black/30">NODE ID</span>
+                         <span className="font-mono text-black">{job.issue_id.slice(0, 8)}</span>
+                      </div>
                     </div>
 
-                    {/* Error */}
                     {job.error_msg && (
-                      <p className="mt-1 text-xs text-red-400">{job.error_msg}</p>
+                      <div className="mt-4 text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200">
+                         <span className="font-bold mr-2 text-red-700">ERR:</span> {job.error_msg}
+                      </div>
                     )}
 
-                    {/* GitHub PR link */}
                     {job.github_pr_url && (
                       <a
                         href={job.github_pr_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                        className="mt-4 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white bg-black hover:bg-[#222] px-6 py-3 transition-all"
                       >
-                        PR #{job.github_pr_number} →
+                        Launch PR #{job.github_pr_number} <span className="font-mono">→</span>
                       </a>
                     )}
                   </div>
 
-                  {/* Expand sandbox log */}
-                  {job.sandbox_log && (
+                  {/* Expand toggle */}
+                  {(job.sandbox_log || job.patch_text) && (
                     <button
                       onClick={() => toggleExpand(job.id)}
-                      className="flex-shrink-0 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      className="shrink-0 text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 hover:text-black transition-colors"
                     >
-                      {isExpanded ? "Hide log" : "Show log"}
+                      {isExpanded ? "Hide Telemetry" : "View Telemetry"}
                     </button>
                   )}
                 </div>
 
-                {/* Sandbox log */}
-                {isExpanded && job.sandbox_log && (
-                  <pre className="mt-3 p-3 bg-gray-900 rounded-lg text-xs text-gray-300 overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
-                    {job.sandbox_log}
-                  </pre>
-                )}
-
-                {/* Patch preview */}
-                {isExpanded && job.patch_text && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500 mb-1">Fixed file snippet:</p>
-                    <pre className="p-3 bg-gray-900 rounded-lg text-xs text-gray-300 overflow-x-auto max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">
-                      {job.patch_text.slice(0, 2000)}
-                      {job.patch_text.length > 2000 ? "\n…" : ""}
-                    </pre>
+                {isExpanded && (
+                  <div className="mt-6 pt-6 border-t border-black/10 flex flex-col gap-6">
+                    {/* Patch preview */}
+                    {job.patch_text && (
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/30 block mb-3">Proposed Semantics Diff</span>
+                        <pre className="p-6 bg-[#F9F9F9] border border-black/10 text-[11px] text-black/70 overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed">
+                          {job.patch_text.slice(0, 2000)}
+                          {job.patch_text.length > 2000 ? "\n...[truncated]" : ""}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {/* Sandbox log */}
+                    {job.sandbox_log && (
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/30 block mb-3">Sandbox Telemetry</span>
+                        <pre className="p-6 bg-black text-white/70 text-[10px] overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed selection:bg-white/20">
+                          {job.sandbox_log}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -7,25 +7,27 @@ import { healthApi, HealthResponse } from "@/lib/api";
 function RiskBadge({ score }: { score: number }) {
   const color =
     score < 30
-      ? "text-green-400 border-green-700 bg-green-900/30"
+      ? "text-emerald-600 border-emerald-200 bg-emerald-50"
       : score < 60
-      ? "text-yellow-400 border-yellow-700 bg-yellow-900/30"
-      : "text-red-400 border-red-700 bg-red-900/30";
-  const label = score < 30 ? "Low" : score < 60 ? "Medium" : "High";
+      ? "text-orange-600 border-orange-200 bg-orange-50"
+      : "text-red-600 border-red-200 bg-red-50";
+  const label = score < 30 ? "Marginal" : score < 60 ? "Elevated" : "Critical";
   return (
-    <div className={`inline-flex flex-col items-center justify-center border rounded-xl px-6 py-4 ${color}`}>
-      <span className="text-4xl font-bold">{score}</span>
-      <span className="text-xs mt-1 font-medium uppercase tracking-wide">{label} Risk</span>
+    <div className={`flex flex-col items-center justify-center border px-8 py-6 shadow-sm shrink-0 w-48 ${color}`}>
+      <span className="text-5xl font-medium tracking-tighter mb-1">{score}</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{label} RISK</span>
     </div>
   );
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3">
-      <div className="text-2xl font-semibold text-white">{value}</div>
-      <div className="text-xs text-gray-400 mt-0.5">{label}</div>
-      {sub && <div className="text-xs text-gray-500 mt-0.5">{sub}</div>}
+    <div className="bg-white border border-black/10 px-6 py-5 shadow-sm flex flex-col justify-between">
+      <div>
+        <div className="text-2xl font-medium text-black tracking-tight mb-1">{value}</div>
+        <div className="text-[9px] font-bold text-black/40 uppercase tracking-[0.1em]">{label}</div>
+      </div>
+      {sub && <div className="text-[10px] text-black/50 mt-4 font-mono tracking-tight">{sub}</div>}
     </div>
   );
 }
@@ -33,11 +35,11 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 function VelocityBar({ commits, max }: { commits: number; max: number }) {
   const pct = max === 0 ? 0 : Math.round((commits / max) * 100);
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-800 rounded-full h-2">
-        <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-4 w-full">
+      <div className="flex-1 bg-[#F9F9F9] border border-black/5 h-3 relative">
+        <div className="bg-black/80 h-full transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-400 w-6 text-right">{commits}</span>
+      <span className="text-[10px] font-mono text-black/50 w-8 text-right shrink-0">{commits}</span>
     </div>
   );
 }
@@ -61,30 +63,49 @@ export default function HealthPage({ params }: { params: Promise<{ id: string }>
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-20 bg-gray-800 rounded animate-pulse" />
-        ))}
+      <div className="space-y-6">
+        <div className="flex gap-6 mb-8">
+           <div className="w-48 h-32 bg-white border border-black/5 shadow-sm animate-pulse shrink-0" />
+           <div className="flex-1 grid grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-32 bg-white border border-black/5 shadow-sm animate-pulse" />
+              ))}
+           </div>
+        </div>
+        <div className="h-64 bg-white border border-black/5 shadow-sm animate-pulse" />
       </div>
     );
   }
   if (error || !health) {
-    return <div className="text-red-400 py-8 text-center">{error || "No health data available."}</div>;
+    return (
+      <div className="text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200 flex">
+         <span className="font-bold mr-2">SYS_ERR:</span> {error || "No health data available."}
+      </div>
+    );
   }
 
   const maxCommits = Math.max(...health.weekly_velocity.map((w) => w.commits), 1);
 
   const fmtWeek = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase();
   };
 
   return (
-    <div className="space-y-8">
+    <div className="font-sans space-y-12">
+      <div className="flex flex-col md:flex-row items-start justify-between pb-8 border-b border-black/10 gap-6">
+        <div>
+           <h2 className="text-2xl font-medium text-black tracking-tight mb-2">SYSTEM HEALTH</h2>
+           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
+             Architectural integrity metrics & volatility analysis
+           </p>
+        </div>
+      </div>
+
       {/* Risk + Overview */}
-      <div className="flex flex-wrap gap-6 items-start">
+      <div className="flex flex-col md:flex-row gap-6 items-stretch">
         <RiskBadge score={health.risk_score} />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 flex-1">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 flex-1">
           <StatCard label="Total Commits" value={health.total_commits} />
           <StatCard
             label="Bug Fix Rate"
@@ -97,59 +118,71 @@ export default function HealthPage({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
-      {/* Weekly velocity */}
-      {health.weekly_velocity.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Weekly Commit Velocity (last 8 weeks)</h2>
-          <div className="space-y-2 bg-gray-900 border border-gray-800 rounded-lg p-4">
-            {health.weekly_velocity.map((w) => (
-              <div key={w.week} className="grid grid-cols-[80px_1fr_auto] items-center gap-3">
-                <span className="text-xs text-gray-400">{fmtWeek(w.week)}</span>
-                <VelocityBar commits={w.commits} max={maxCommits} />
-                <span className="text-xs text-orange-400 w-12 text-right">
-                  {w.bug_fixes > 0 ? `${w.bug_fixes} fix${w.bug_fixes !== 1 ? "es" : ""}` : ""}
-                </span>
-              </div>
-            ))}
+      <div className="grid lg:grid-cols-2 gap-12 items-start pt-8 border-t border-black/10">
+        
+        {/* Weekly velocity */}
+        {health.weekly_velocity.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-black/10">
+               <span className="text-[10px] font-mono tracking-widest text-black/40">01.</span>
+               <h2 className="text-sm font-bold text-black uppercase tracking-[0.2em]">Velocity Index</h2>
+            </div>
+            <div className="space-y-1 bg-white border border-black/10 shadow-sm p-6">
+              {health.weekly_velocity.map((w) => (
+                <div key={w.week} className="flex items-center gap-4 py-2 border-b border-black/5 last:border-0 hover:bg-black/5 transition-colors px-2 -mx-2">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-black/50 w-16 shrink-0">{fmtWeek(w.week)}</span>
+                  <div className="flex-1">
+                    <VelocityBar commits={w.commits} max={maxCommits} />
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-orange-600 w-16 text-right shrink-0">
+                    {w.bug_fixes > 0 ? `${w.bug_fixes} FIX${w.bug_fixes !== 1 ? "ES" : ""}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Hotspots */}
-      {health.hotspots.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-2">Hotspot Files</h2>
-          <p className="text-sm text-gray-400 mb-3">Files with high churn that also have open issues</p>
-          <div className="rounded-lg border border-gray-800 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-800 text-gray-400 text-xs uppercase">
-                  <th className="px-4 py-2 text-left">File</th>
-                  <th className="px-4 py-2 text-right">Commits</th>
-                  <th className="px-4 py-2 text-right">Churn</th>
-                  <th className="px-4 py-2 text-right">Open Issues</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {health.hotspots.map((h) => (
-                  <tr key={h.file_path} className="bg-gray-900 hover:bg-gray-850 transition">
-                    <td className="px-4 py-2 font-mono text-xs text-gray-200 max-w-xs truncate">{h.file_path}</td>
-                    <td className="px-4 py-2 text-right text-gray-300">{h.commit_count}</td>
-                    <td className="px-4 py-2 text-right text-orange-400">{h.churn.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-right">
-                      {h.open_issues > 0 ? (
-                        <span className="text-red-400 font-medium">{h.open_issues}</span>
-                      ) : (
-                        <span className="text-gray-600">0</span>
-                      )}
-                    </td>
+        {/* Hotspots */}
+        {health.hotspots.length > 0 && (
+          <div>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-black/10">
+               <span className="text-[10px] font-mono tracking-widest text-black/40">02.</span>
+               <h2 className="text-sm font-bold text-black uppercase tracking-[0.2em]">Critical Hotspots</h2>
+            </div>
+            <div className="border border-black/10 shadow-sm overflow-hidden bg-white">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-[#F9F9F9] border-b border-black/10 text-[9px] font-bold uppercase tracking-[0.2em] text-black/40">
+                    <th className="px-6 py-4">Node Path</th>
+                    <th className="px-6 py-4 text-right">Commits</th>
+                    <th className="px-6 py-4 text-right">Churn</th>
+                    <th className="px-6 py-4 text-right">Anomalies</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {health.hotspots.map((h) => (
+                    <tr key={h.file_path} className="hover:bg-black/5 transition-colors">
+                      <td className="px-6 py-4 font-mono text-[10px] text-black max-w-[200px] truncate" title={h.file_path}>
+                         {h.file_path}
+                      </td>
+                      <td className="px-6 py-4 text-right text-[10px] font-mono text-black/60">{h.commit_count}</td>
+                      <td className="px-6 py-4 text-right text-[10px] font-mono text-orange-600 bg-orange-50/50">{h.churn.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right">
+                        {h.open_issues > 0 ? (
+                          <span className="text-[10px] font-mono text-red-600 bg-red-50 px-2 py-0.5 border border-red-100">{h.open_issues}</span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-black/20">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

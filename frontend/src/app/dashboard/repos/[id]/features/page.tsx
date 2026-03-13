@@ -6,20 +6,20 @@ import { tokenStore } from "@/lib/auth";
 import { featureRequestsApi, FeatureRequestOut, FeatureRequestListResponse } from "@/lib/api";
 
 const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
-  pending:    { badge: "bg-gray-700 text-gray-400 border-gray-600",           label: "Pending" },
-  planning:   { badge: "bg-cyan-900/50 text-cyan-300 border-cyan-700",        label: "Planning" },
-  coding:     { badge: "bg-blue-900/50 text-blue-300 border-blue-700",        label: "Coding" },
-  sandboxing: { badge: "bg-yellow-900/50 text-yellow-300 border-yellow-700",  label: "Sandboxing" },
-  pushing:    { badge: "bg-indigo-900/50 text-indigo-300 border-indigo-700",  label: "Pushing" },
-  pr_opened:  { badge: "bg-green-900/50 text-green-300 border-green-700",     label: "PR Opened" },
-  merged:     { badge: "bg-purple-900/50 text-purple-300 border-purple-700",  label: "Merged ✓" },
-  failed:     { badge: "bg-red-900/50 text-red-300 border-red-700",           label: "Failed" },
+  pending:    { badge: "bg-[#F9F9F9] text-black/40 border-black/10",           label: "Queued" },
+  planning:   { badge: "bg-cyan-50 text-cyan-700 border-cyan-200",        label: "Planning" },
+  coding:     { badge: "bg-blue-50 text-blue-700 border-blue-200",        label: "Coding" },
+  sandboxing: { badge: "bg-amber-50 text-amber-700 border-amber-200",  label: "Sandboxing" },
+  pushing:    { badge: "bg-indigo-50 text-indigo-700 border-indigo-200",  label: "Pushing" },
+  pr_opened:  { badge: "bg-emerald-50 text-emerald-700 border-emerald-200",     label: "PR Active" },
+  merged:     { badge: "bg-purple-50 text-purple-700 border-purple-200",  label: "Merged" },
+  failed:     { badge: "bg-red-50 text-red-700 border-red-200",           label: "Failed" },
 };
 
 const SANDBOX_STYLE: Record<string, string> = {
-  passed:  "text-green-400",
-  failed:  "text-red-400",
-  skipped: "text-gray-400",
+  passed:  "text-emerald-600",
+  failed:  "text-red-600",
+  skipped: "text-black/40",
 };
 
 const ACTIVE_STATUSES = new Set(["pending", "planning", "coding", "sandboxing", "pushing"]);
@@ -36,28 +36,30 @@ function PlanView({ planJson }: { planJson: string | null }) {
   }
 
   return (
-    <div className="mt-2">
+    <div className="mt-4 pt-4 border-t border-black/10">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-gray-400 hover:text-white transition-colors"
+        className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 hover:text-black transition-colors"
       >
-        {open ? "▾ Hide plan" : `▸ Show plan (${items.length} file${items.length !== 1 ? "s" : ""})`}
+        {open ? "Hide blueprint" : `View architecture blueprint (${items.length} node${items.length !== 1 ? "s" : ""})`}
       </button>
       {open && (
-        <ul className="mt-2 space-y-1">
+        <ul className="mt-4 space-y-2 border-l-2 border-black/10 pl-4 py-2">
           {items.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs">
-              <span
-                className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                  item.action === "create"
-                    ? "bg-green-900/40 text-green-300"
-                    : "bg-blue-900/40 text-blue-300"
-                }`}
-              >
-                {item.action}
-              </span>
-              <span className="font-mono text-gray-300">{item.file_path}</span>
-              <span className="text-gray-500 truncate">{item.description}</span>
+            <li key={i} className="flex flex-col md:flex-row md:items-baseline gap-2 text-sm font-sans mb-4 last:mb-0">
+              <div className="flex items-center gap-3 shrink-0">
+                 <span
+                   className={`px-2 py-0.5 border text-[9px] font-bold uppercase tracking-[0.2em] ${
+                     item.action.toLowerCase() === "create" || item.action.toLowerCase() === "add"
+                       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                       : "bg-blue-50 text-blue-700 border-blue-200"
+                   }`}
+                 >
+                   {item.action}
+                 </span>
+                 <span className="font-mono text-xs text-black tracking-tight">{item.file_path}</span>
+              </div>
+              <span className="text-black/60 text-sm leading-snug max-w-2xl">{item.description}</span>
             </li>
           ))}
         </ul>
@@ -133,143 +135,163 @@ export default function FeaturesPage() {
   }
 
   return (
-    <div>
+    <div className="font-sans space-y-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-8 border-b border-black/10 gap-6">
+        <div>
+           <h2 className="text-2xl font-medium text-black tracking-tight mb-2">FEATURE SYNTHESIS.</h2>
+           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">
+             Instruct ARMA to autonomously construct and integrate new capabilities
+           </p>
+        </div>
+      </div>
+
       {/* Submit form */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-1">Request a Feature</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Describe what you want in plain English. ARMA will plan, write the code, and open a PR.
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="bg-white border border-black/10 shadow-sm p-8 hover:border-black transition-colors">
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-black/10">
+           <span className="text-[10px] font-mono tracking-widest text-black/40">INPUT</span>
+           <h2 className="text-sm font-bold text-black uppercase tracking-[0.2em]">Objective Specification</h2>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Add rate limiting to all API endpoints using a sliding window algorithm"
-            rows={3}
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            placeholder="Describe the desired system behavior or capability. Ex: Implement a Redis-backed caching utility for the global state matrix."
+            rows={4}
+            className="w-full bg-[#F9F9F9] border border-black/10 rounded-none px-6 py-4 font-sans text-sm text-black placeholder-black/30 focus:outline-none focus:border-black transition-colors resize-none leading-relaxed"
           />
           {submitError && (
-            <p className="text-xs text-red-400">{submitError}</p>
+             <div className="text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200 flex">
+                <span className="font-bold mr-2 text-red-700">SYS_ERR:</span> {submitError}
+             </div>
           )}
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={submitting || !description.trim()}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-8 py-3 bg-black hover:bg-[#222] disabled:opacity-40 disabled:hover:bg-black text-white text-[10px] font-bold uppercase tracking-[0.2em] transition-all"
             >
-              {submitting ? "Submitting…" : "Submit Feature Request"}
+              {submitting ? "Synthesizing..." : "Initiate Build Sequence"}
             </button>
           </div>
         </form>
       </div>
 
       {/* Jobs list */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
-          Feature Requests
-        </h3>
-        <button
-          onClick={load}
-          className="text-xs text-gray-400 hover:text-white transition-colors"
-        >
-          ↺ Refresh
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-24 bg-gray-800 rounded-xl animate-pulse" />
-          ))}
+      <div>
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/10">
+          <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-black/40">
+            Active Integrations
+          </h3>
+          <button
+            onClick={load}
+            className="flex items-center gap-2 bg-white border border-black/10 hover:border-black text-black text-[10px] uppercase font-bold tracking-[0.2em] px-4 py-2 transition-all shadow-sm"
+          >
+            <span className="font-mono text-black/40 rotate-180">↻</span> Sync
+          </button>
         </div>
-      ) : !data || data.requests.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-gray-700 rounded-xl">
-          <p className="text-gray-500 text-sm">No feature requests yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {data.requests.map((fr) => {
-            const st = STATUS_STYLE[fr.status] ?? STATUS_STYLE.pending;
-            const isActive = ACTIVE_STATUSES.has(fr.status);
-            const logExpanded = expandedLogs.has(fr.id);
 
-            return (
-              <div
-                key={fr.id}
-                className="rounded-xl border border-gray-700 bg-gray-800/50 p-4"
-              >
-                <div className="flex items-start gap-3">
-                  {/* Status badge */}
-                  <span
-                    className={`flex-shrink-0 inline-flex items-center gap-1.5 border rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.badge}`}
-                  >
-                    {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-                    )}
-                    {st.label}
-                  </span>
+        {loading ? (
+          <div className="space-y-4">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-32 bg-white border border-black/5 shadow-sm animate-pulse" />
+            ))}
+          </div>
+        ) : !data || data.requests.length === 0 ? (
+          <div className="text-center py-32 bg-white border border-dashed border-black/10">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">System reports zero active feature modules.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {data.requests.map((fr) => {
+              const st = STATUS_STYLE[fr.status] ?? STATUS_STYLE.pending;
+              const isActive = ACTIVE_STATUSES.has(fr.status);
+              const logExpanded = expandedLogs.has(fr.id);
 
-                  <div className="flex-1 min-w-0">
-                    {/* Description */}
-                    <p className="text-sm text-gray-100">{fr.description}</p>
-
-                    {/* Meta */}
-                    <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
-                      <span className="font-mono">{fr.branch_name ?? "—"}</span>
-                      {fr.sandbox_result && (
-                        <span className={SANDBOX_STYLE[fr.sandbox_result] ?? ""}>
-                          Tests: {fr.sandbox_result}
-                        </span>
-                      )}
-                      <span>{new Date(fr.created_at).toLocaleString()}</span>
+              return (
+                <div
+                  key={fr.id}
+                  className="bg-white border border-black/10 shadow-sm p-6 hover:border-black transition-colors"
+                >
+                  <div className="flex flex-col md:flex-row md:items-start md:gap-8 gap-4">
+                    {/* Status indicator */}
+                    <div className="shrink-0 w-32 flex flex-col gap-2">
+                       <span
+                         className={`inline-flex items-center justify-center gap-2 border w-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] ${st.badge}`}
+                       >
+                         {isActive && (
+                           <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                         )}
+                         {st.label}
+                       </span>
+                       {fr.sandbox_result && (
+                         <span className={`text-[9px] font-bold text-center uppercase tracking-[0.2em] bg-[#F9F9F9] border border-black/5 px-2 py-1 ${SANDBOX_STYLE[fr.sandbox_result] ?? ""}`}>
+                           TEST: {fr.sandbox_result}
+                         </span>
+                       )}
                     </div>
 
-                    {/* Error */}
-                    {fr.error_msg && (
-                      <p className="mt-1 text-xs text-red-400">{fr.error_msg}</p>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      {/* Description */}
+                      <p className="text-sm text-black leading-relaxed mb-4">{fr.description}</p>
 
-                    {/* Plan */}
-                    <PlanView planJson={fr.plan_json} />
-
-                    {/* Sandbox log */}
-                    {fr.sandbox_log && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => toggleLog(fr.id)}
-                          className="text-xs text-gray-400 hover:text-white transition-colors"
-                        >
-                          {logExpanded ? "▾ Hide sandbox log" : "▸ Show sandbox log"}
-                        </button>
-                        {logExpanded && (
-                          <pre className="mt-2 p-3 bg-gray-900 rounded-lg text-[11px] text-gray-300 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
-                            {fr.sandbox_log}
-                          </pre>
-                        )}
+                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-[0.1em] text-black/40 bg-[#F9F9F9] border border-black/5 p-3 mb-2">
+                        <div className="flex items-center gap-2">
+                           <span className="text-black/30">BRANCH</span>
+                           <span className="font-mono text-black">{fr.branch_name ?? "—"}</span>
+                        </div>
+                        <div className="w-px h-3 bg-black/10 hidden sm:block" />
+                        <div className="flex items-center gap-2">
+                           <span className="text-black/30">LIFECYCLE</span>
+                           <span className="font-mono text-black">{new Date(fr.created_at).toLocaleString()}</span>
+                        </div>
                       </div>
-                    )}
 
-                    {/* GitHub PR link */}
-                    {fr.github_pr_url && (
-                      <a
-                        href={fr.github_pr_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12" />
-                        </svg>
-                        View PR #{fr.github_pr_number}
-                      </a>
-                    )}
+                      {fr.error_msg && (
+                        <div className="mt-4 text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200">
+                           <span className="font-bold mr-2 text-red-700">ERR:</span> {fr.error_msg}
+                        </div>
+                      )}
+
+                      <PlanView planJson={fr.plan_json} />
+
+                      {fr.sandbox_log && (
+                        <div className="mt-4 pt-4 border-t border-black/10">
+                          <button
+                            onClick={() => toggleLog(fr.id)}
+                            className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 hover:text-black transition-colors"
+                          >
+                            {logExpanded ? "Hide Telemetry" : "View Sandbox Telemetry"}
+                          </button>
+                          {logExpanded && (
+                            <pre className="mt-4 p-6 bg-black text-white/70 text-[10px] overflow-x-auto max-h-64 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed selection:bg-white/20">
+                              {fr.sandbox_log}
+                            </pre>
+                          )}
+                        </div>
+                      )}
+
+                      {fr.github_pr_url && (
+                        <div className="mt-6 pt-6 border-t border-black/10">
+                            <a
+                              href={fr.github_pr_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white bg-black hover:bg-[#222] px-6 py-3 transition-all"
+                            >
+                              Launch Payload PR #{fr.github_pr_number} <span className="font-mono text-white/50">→</span>
+                            </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

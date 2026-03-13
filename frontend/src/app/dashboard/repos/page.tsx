@@ -8,18 +8,18 @@ import { githubApi, reposApi, GithubRepoItem, RepoOut, ApiError } from "@/lib/ap
 type Tab = "connected" | "browse";
 
 const STATUS_STYLE: Record<string, string> = {
-  ready:   "bg-green-900/50 text-green-300 border-green-700",
-  cloning: "bg-blue-900/50 text-blue-300 border-blue-700",
-  parsing: "bg-blue-900/50 text-blue-300 border-blue-700",
-  pending: "bg-gray-800 text-gray-400 border-gray-600",
-  error:   "bg-red-900/50 text-red-300 border-red-700",
+  ready:   "bg-[#F9F9F9] text-black border-black border",
+  cloning: "bg-blue-50 text-blue-600 border-blue-200 border",
+  parsing: "bg-blue-50 text-blue-600 border-blue-200 border",
+  pending: "bg-[#F9F9F9] text-black/40 border-black/10 border",
+  error:   "bg-red-50 text-red-600 border-red-200 border",
 };
 
 function StatusBadge({ status }: { status: string }) {
   const PULSE = status === "cloning" || status === "parsing";
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-0.5 ${STATUS_STYLE[status] ?? STATUS_STYLE.pending}`}>
-      {PULSE && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />}
+    <span className={`inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 ${STATUS_STYLE[status] ?? STATUS_STYLE.pending}`}>
+      {PULSE && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
       {status}
     </span>
   );
@@ -108,28 +108,31 @@ export default function ReposPage() {
   );
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Repositories</h1>
-        <div className="flex rounded-lg border border-gray-700 overflow-hidden text-sm">
+    <div className="p-8 md:p-12 max-w-7xl mx-auto font-sans">
+      <div className="mb-12 border-b border-black/10 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
+        <div>
+           <h1 className="text-4xl md:text-5xl font-medium text-black mb-4 tracking-tight">WORKSPACES.</h1>
+           <p className="text-sm font-medium text-black/50 max-w-lg">Manage connected repositories and initialize new analysis pipelines.</p>
+        </div>
+        <div className="flex bg-white border border-black/10 shadow-sm text-sm p-1 gap-1">
           {(["connected", "browse"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => switchTab(t)}
-              className={`px-4 py-2 font-medium capitalize transition ${
+              className={`px-6 py-2.5 font-bold uppercase tracking-[0.1em] text-[10px] transition-all ${
                 tab === t
-                  ? "bg-indigo-600 text-white"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  ? "bg-black text-white"
+                  : "text-black/40 hover:text-black hover:bg-black/5"
               }`}
             >
-              {t === "connected" ? `Connected (${connected.length})` : "Browse GitHub"}
+              {t === "connected" ? `Active (${connected.length})` : "GitHub Setup"}
             </button>
           ))}
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">
+        <div className="mb-8 px-5 py-4 bg-red-50 border border-red-200 text-red-600 font-medium text-xs tracking-wide uppercase">
           {error}
         </div>
       )}
@@ -138,37 +141,41 @@ export default function ReposPage() {
       {tab === "connected" && (
         <>
           {loadingConnected ? (
-            <p className="text-gray-500 text-sm">Loading…</p>
+            <div className="py-20 flex flex-col items-center justify-center">
+               <div className="w-8 h-8 flex items-center justify-center border border-black/10 rounded-full animate-spin border-t-black mb-4"></div>
+               <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-black/40">Loading Workspaces...</p>
+            </div>
           ) : connected.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
-              <p className="text-4xl mb-3">⊞</p>
-              <p className="font-medium text-gray-400 mb-1">No repositories connected yet</p>
-              <p className="text-sm mb-4">Browse your GitHub repos and click Connect to get started.</p>
+            <div className="text-center py-32 bg-white border border-black/10 border-dashed">
+              <p className="text-4xl mb-6 text-black/20">⊞</p>
+              <p className="font-medium text-black mb-2 text-xl tracking-tight">No Active Workspaces</p>
+              <p className="text-sm mb-8 text-black/50">Initialize a GitHub repository to begin autonomous analysis.</p>
               <button
                 onClick={() => switchTab("browse")}
-                className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                className="text-[10px] uppercase font-bold tracking-[0.2em] bg-black hover:bg-[#222] text-white px-8 py-4 transition-colors inline-block"
               >
-                Browse GitHub
+                Browse Integrations
               </button>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               {connected.map((repo) => (
-                <div
+                <Link
                   key={repo.id}
-                  className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center justify-between gap-4"
+                  href={`/dashboard/repos/${repo.id}`}
+                  className="bg-white border border-black/10 p-6 flex items-center justify-between gap-6 hover:border-black transition-all group shadow-sm"
                 >
                   <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/repos/${repo.id}`}
-                      className="font-medium text-white hover:text-indigo-400 transition truncate block"
-                    >
+                    <p className="font-medium text-black tracking-tight text-lg mb-1 truncate group-hover:underline underline-offset-4 decoration-black/20">
                       {repo.full_name}
-                    </Link>
-                    <p className="text-xs text-gray-500 mt-0.5">{repo.default_branch}</p>
+                    </p>
+                    <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-black/40">Branch: {repo.default_branch}</p>
                   </div>
-                  <StatusBadge status={repo.status} />
-                </div>
+                  <div className="shrink-0 flex items-center gap-6">
+                     <StatusBadge status={repo.status} />
+                     <span className="font-mono text-black/30 group-hover:text-black group-hover:translate-x-1 transition-all">→</span>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
@@ -178,62 +185,73 @@ export default function ReposPage() {
       {/* ── Browse GitHub ── */}
       {tab === "browse" && (
         <>
-          <div className="mb-4">
+          <div className="mb-8">
             <input
               type="search"
-              placeholder="Filter repositories…"
+              placeholder="Filter available repositories..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full max-w-sm px-3.5 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full max-w-xl px-4 py-4 bg-white border border-black/10 text-black placeholder-black/30 focus:outline-none focus:border-black transition-colors font-mono text-sm shadow-sm"
             />
           </div>
 
           {loadingGithub ? (
-            <p className="text-gray-500 text-sm">Loading from GitHub…</p>
+            <div className="py-20 flex flex-col items-center justify-center">
+               <div className="w-8 h-8 flex items-center justify-center border border-black/10 rounded-full animate-spin border-t-black mb-4"></div>
+               <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-black/40">Fetching from GitHub...</p>
+            </div>
           ) : (
-            <div className="grid gap-2">
+            <div className="grid gap-4">
               {filteredGithub.map((repo) => {
                 const already = connectedIds.has(repo.id);
                 return (
                   <div
                     key={repo.id}
-                    className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex items-center justify-between gap-4"
+                    className="bg-white border border-black/10 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:border-black/30 transition-all shadow-sm group"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-white truncate">{repo.full_name}</span>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="font-medium text-black text-lg tracking-tight truncate">{repo.full_name}</span>
                         {repo.private && (
-                          <span className="text-xs text-gray-500 border border-gray-700 rounded px-1.5">private</span>
+                          <span className="text-[9px] uppercase font-bold tracking-[0.2em] text-black/40 border border-black/10 px-2 py-0.5 rounded-sm bg-[#F9F9F9]">Private</span>
                         )}
                       </div>
                       {repo.description && (
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{repo.description}</p>
+                        <p className="text-sm text-black/60 mb-3 truncate max-w-2xl">{repo.description}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-5">
                         {repo.language && (
-                          <span className="text-xs text-gray-500">{repo.language}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-black/20"></div>
+                            <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-black/50">{repo.language}</span>
+                          </div>
                         )}
                         {repo.stargazers_count > 0 && (
-                          <span className="text-xs text-gray-500">★ {repo.stargazers_count}</span>
+                          <div className="flex items-center gap-2">
+                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-black/40"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                             <span className="text-[10px] font-mono text-black/50">{repo.stargazers_count}</span>
+                          </div>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={() => handleConnect(repo)}
                       disabled={already || connecting === repo.id}
-                      className={`shrink-0 text-sm font-medium px-4 py-2 rounded-lg transition ${
+                      className={`shrink-0 text-[10px] font-bold uppercase tracking-[0.2em] px-8 py-4 transition-all ${
                         already
-                          ? "text-green-400 border border-green-700 bg-green-900/30 cursor-default"
-                          : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                          ? "text-black/30 bg-[#F9F9F9] border border-black/10 cursor-not-allowed"
+                          : "bg-black hover:bg-[#222] text-white disabled:opacity-50"
                       }`}
                     >
-                      {already ? "Connected" : connecting === repo.id ? "Connecting…" : "Connect"}
+                      {already ? "Initialized" : connecting === repo.id ? "Connecting..." : "Initialize"}
                     </button>
                   </div>
                 );
               })}
               {filteredGithub.length === 0 && !loadingGithub && (
-                <p className="text-gray-500 text-sm py-8 text-center">No repositories found.</p>
+                <div className="text-center py-20 text-black/40 text-[10px] uppercase font-bold tracking-[0.3em]">
+                   No matching repositories found.
+                </div>
               )}
             </div>
           )}

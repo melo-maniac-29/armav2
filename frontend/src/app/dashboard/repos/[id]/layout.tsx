@@ -7,11 +7,11 @@ import { tokenStore } from "@/lib/auth";
 import { reposApi, RepoOut } from "@/lib/api";
 
 const STATUS_STYLE: Record<string, string> = {
-  ready:   "bg-green-900/50 text-green-300 border-green-700",
-  cloning: "bg-blue-900/50 text-blue-300 border-blue-700",
-  parsing: "bg-blue-900/50 text-blue-300 border-blue-700",
-  pending: "bg-gray-800 text-gray-400 border-gray-600",
-  error:   "bg-red-900/50 text-red-300 border-red-700",
+  ready:   "bg-[#F9F9F9] text-black border-black border",
+  cloning: "bg-blue-50 text-blue-600 border-blue-200 border",
+  parsing: "bg-blue-50 text-blue-600 border-blue-200 border",
+  pending: "bg-[#F9F9F9] text-black/40 border-black/10 border",
+  error:   "bg-red-50 text-red-600 border-red-200 border",
 };
 
 const TABS = [
@@ -60,34 +60,41 @@ export default function RepoLayout({
   }, [id, repo]);
 
   return (
-    <div>
+    <div className="p-8 md:p-12 max-w-7xl mx-auto font-sans min-h-screen bg-[#F9F9F9]">
       {/* Header */}
-      <div className="mb-6">
-        <Link href="/dashboard/repos" className="text-sm text-gray-500 hover:text-gray-300 transition mb-2 inline-block">
-          ← Repositories
+      <div className="mb-12">
+        <Link href="/dashboard/repos" className="text-[10px] uppercase font-bold tracking-[0.2em] text-black/40 hover:text-black transition-colors mb-6 flex items-center gap-2 group">
+          <span className="font-mono group-hover:-translate-x-1 transition-transform">←</span>
+          Return to Workspaces
         </Link>
         {repo ? (
-          <div className="flex items-center gap-3 mt-1">
-            <h1 className="text-xl font-semibold text-white">{repo.full_name}</h1>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-black/10">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 mb-2">Active Workspace</p>
+              <h1 className="text-4xl md:text-5xl font-medium text-black tracking-tight">{repo.full_name}</h1>
+            </div>
             <span
-              className={`inline-flex items-center gap-1.5 text-xs font-medium border rounded-full px-2.5 py-0.5 ${STATUS_STYLE[repo.status] ?? STATUS_STYLE.pending}`}
+              className={`inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 shrink-0 ${STATUS_STYLE[repo.status] ?? STATUS_STYLE.pending}`}
             >
               {(repo.status === "cloning" || repo.status === "parsing") && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               )}
               {repo.status}
             </span>
           </div>
         ) : (
-          <div className="h-7 w-48 bg-gray-800 rounded animate-pulse mt-1" />
+          <div className="pb-8 border-b border-black/10 animate-pulse">
+            <div className="w-32 h-3 bg-black/10 mb-4 rounded-full" />
+            <div className="w-64 h-12 bg-black/5 rounded-sm" />
+          </div>
         )}
         {repo?.error_msg && (
-          <p className="text-xs text-red-400 mt-1">{repo.error_msg}</p>
+          <p className="text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200 mt-4 inline-block">{repo.error_msg}</p>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-800 mb-6">
+      <div className="flex gap-2 border-b border-black/10 mb-8 overflow-x-auto pb-px hide-scrollbar">
         {TABS.map(({ label, segment }) => {
           const href = `/dashboard/repos/${id}${segment ? `/${segment}` : ""}`;
           const active = segment === "" ? pathname === href : pathname.startsWith(href);
@@ -95,10 +102,10 @@ export default function RepoLayout({
             <Link
               key={label}
               href={href}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
+              className={`px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] border-b-2 transition-all whitespace-nowrap ${
                 active
-                  ? "border-indigo-500 text-white"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
+                  ? "border-black text-black bg-black/5"
+                  : "border-transparent text-black/40 hover:text-black hover:bg-black/5"
               }`}
             >
               {label}

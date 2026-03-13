@@ -28,62 +28,81 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white tracking-tight">ARMA</h1>
-          <p className="text-gray-400 mt-1 text-sm">Autonomous Repository Memory & Actions</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9] text-[#111] font-sans selection:bg-black selection:text-white px-6 relative overflow-hidden">
+      
+      {/* Background accents */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-multiply z-0"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_30%,transparent_100%)] z-10"></div>
+      </div>
+
+      <nav className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-6 md:px-12 w-full max-w-[1600px] mx-auto">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="text-black font-black text-2xl tracking-tighter">ARMA.</div>
+          <div className="px-2 py-0.5 border border-black/10 rounded-full text-[10px] font-bold tracking-widest text-[#111] uppercase bg-black/5">
+            Log In
+          </div>
+        </Link>
+        <Link href="/register" className="text-xs uppercase tracking-widest text-black/60 hover:text-black transition-colors duration-300 font-bold">
+          Register
+        </Link>
+      </nav>
+
+      <div className="w-full max-w-sm relative z-20 mt-12">
+        <div className="mb-10 text-center">
+            <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-black mb-4">SYSTEM ACCESS</h1>
+            <p className="text-xs uppercase tracking-[0.2em] font-bold text-black/40">Enter identity token</p>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-xl">
-          <h2 className="text-xl font-semibold text-white mb-6">Sign in</h2>
-
+        <div className="bg-white border border-black/10 shadow-sm p-8 relative group overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-black translate-y-[-100%] group-hover:translate-y-0 transition-transform duration-300" />
+          
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-red-950 border border-red-800 text-red-300 text-sm">
+            <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-red-600 font-medium text-xs tracking-wide uppercase">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-black/60 mb-2">Email Address</label>
               <input
                 type="email"
                 required
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-gray-950 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="you@example.com"
+                className="w-full px-4 py-3 bg-[#F9F9F9] border border-black/10 text-black placeholder-black/20 focus:outline-none focus:border-black transition-colors font-mono text-sm"
+                placeholder="identity@arma.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-black/60 mb-2">Password Hash</label>
               <input
                 type="password"
                 required
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-gray-950 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-[#F9F9F9] border border-black/10 text-black placeholder-black/20 focus:outline-none focus:border-black transition-colors font-mono text-sm"
+                placeholder="********"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition mt-2"
+              className="w-full py-4 bg-black hover:bg-[#222] disabled:bg-black/50 disabled:cursor-not-allowed text-white text-[10px] font-bold uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 mt-4"
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? "Authenticating..." : "Initialize Session"}
+              {!loading && <span className="text-white/50">→</span>}
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-indigo-400 hover:text-indigo-300 transition">
-              Register
+          <p className="text-center text-black/40 text-[10px] uppercase tracking-[0.1em] font-bold mt-8">
+            New agent?{" "}
+            <Link href="/register" className="text-black font-black hover:underline underline-offset-4 decoration-black/20 transition">
+              Request access
             </Link>
           </p>
         </div>
