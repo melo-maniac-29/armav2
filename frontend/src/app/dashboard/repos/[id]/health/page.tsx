@@ -46,20 +46,30 @@ function VelocityBar({ commits, max }: { commits: number; max: number }) {
 
 export default function HealthPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const token = tokenStore.getAccess();
   const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(token));
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = tokenStore.getAccess();
     if (!token) return;
-    setLoading(true);
     healthApi
       .get(token, id)
-      .then(setHealth)
+      .then((data) => {
+        setHealth(data);
+        setError("");
+      })
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
+
+  if (!token) {
+    return (
+      <div className="text-xs text-red-500 bg-red-50 font-mono px-4 py-3 border border-red-200 flex">
+         <span className="font-bold mr-2">SYS_ERR:</span> Missing access token.
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -67,9 +67,15 @@ export default function IssuesPage() {
       await issuesApi.analyze(access, repoId);
       const start = Date.now();
       const poll = async () => {
-        if (Date.now() - start > 300_000) { setAnalyzing(false); return; }
+        if (Date.now() - start > 300_000) {
+          setAnalyzing(false);
+          return;
+        }
         const res = await issuesApi.list(access, repoId).catch(() => null);
-        if (!res) { setTimeout(poll, 4000); return; }
+        if (!res) {
+          setTimeout(poll, 4000);
+          return;
+        }
         const newRunId = res.issues[0]?.run_id ?? null;
         // New run complete when run_id changed, or first-ever run produced results
         const isDone = prevRunId === null
@@ -95,7 +101,9 @@ export default function IssuesPage() {
     try {
       await issuesApi.patch(access, repoId, issue.id, next);
       load();
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
   }
 
   async function handleFix(issue: IssueOut) {
@@ -114,7 +122,11 @@ export default function IssuesPage() {
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }

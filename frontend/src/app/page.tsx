@@ -133,7 +133,7 @@ export default function Home() {
           </div>
           
           <div className="flex flex-col w-full">
-            {architectureSteps.map((step, idx) => (
+            {architectureSteps.map((step) => (
               <div key={step.num} className="group relative flex flex-col md:flex-row md:items-start justify-between py-16 border-t border-black/10 hover:bg-white/50 transition-colors duration-500 px-6 -mx-6">
                 
                 <div className="md:w-1/3 mb-8 md:mb-0">

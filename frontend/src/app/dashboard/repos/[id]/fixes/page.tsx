@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { tokenStore } from "@/lib/auth";
-import { prJobsApi, PrJobOut, PrJobListResponse } from "@/lib/api";
+import { prJobsApi, PrJobListResponse } from "@/lib/api";
 
 const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
   pending:    { badge: "bg-[#F9F9F9] text-black/40 border-black/10",       label: "Queued" },
@@ -62,7 +62,11 @@ export default function FixesPage() {
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
