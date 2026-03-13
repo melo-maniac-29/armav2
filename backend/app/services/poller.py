@@ -201,7 +201,7 @@ async def _auto_reindex_commits(repo_id: str) -> None:
         if not repo_dir.exists():
             return
 
-        commit_records = await asyncio.get_event_loop().run_in_executor(
+        commit_records = await asyncio.get_running_loop().run_in_executor(
             None, lambda: parse_git_log(repo_dir, max_commits=500)
         )
 

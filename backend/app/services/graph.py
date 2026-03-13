@@ -41,9 +41,9 @@ async def build_repo_graph(repo_id: str, symbols_data: list[dict], files_data: l
             await session.run(
                 """
                 UNWIND $files AS f
-                MERGE (:File {repo_id: $repo_id, path: f.path})
+                MERGE (n:File {repo_id: $repo_id, path: f.path})
                   SET n.language = f.language
-                """.replace("MERGE (:File", "MERGE (n:File"),
+                """,
                 repo_id=repo_id,
                 files=files_data,
             )

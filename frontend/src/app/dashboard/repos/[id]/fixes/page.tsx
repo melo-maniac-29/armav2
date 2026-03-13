@@ -21,7 +21,7 @@ const SANDBOX_STYLE: Record<string, string> = {
   skipped: "text-black/40",
 };
 
-const ACTIVE_STATUSES = new Set(["pending", "generating", "sandboxing", "pushing", "pr_opened"]);
+const ACTIVE_STATUSES = new Set(["pending", "generating", "sandboxing", "pushing"]);
 
 export default function FixesPage() {
   const params = useParams<{ id: string }>();

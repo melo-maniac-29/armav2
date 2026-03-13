@@ -80,7 +80,7 @@ export default function IssuesPage() {
         // New run complete when run_id changed, or first-ever run produced results
         const isDone = prevRunId === null
           ? res.issues.length > 0
-          : (newRunId !== null && newRunId !== prevRunId);
+          : newRunId !== prevRunId;
         if (isDone) {
           setData(res);
           setAnalyzing(false);

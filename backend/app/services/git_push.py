@@ -35,6 +35,7 @@ def push_fix_branch(
     branch_name: str,
     base_branch: str,
     changed_files: list[str],
+    file_updates: dict[str, str] | None,
     commit_message: str,
     github_token: str,
     remote_url: str,
@@ -58,6 +59,12 @@ def push_fix_branch(
         _run_git(["checkout", base_branch], repo_dir)
         _run_git(["reset", "--hard", f"origin/{base_branch}"], repo_dir)
         _run_git(["checkout", "-B", branch_name, f"origin/{base_branch}"], repo_dir)
+
+        if file_updates:
+            for rel_path, content in file_updates.items():
+                file_abs = repo_dir / rel_path
+                file_abs.parent.mkdir(parents=True, exist_ok=True)
+                file_abs.write_text(content, encoding="utf-8")
 
         for rel_path in changed_files:
             _run_git(["add", rel_path], repo_dir)

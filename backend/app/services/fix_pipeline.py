@@ -26,6 +26,28 @@ logger = logging.getLogger(__name__)
 MAX_SANDBOX_LOG = 20_000  # chars stored in DB
 
 
+def _restore_repo(repo_dir: Path, base_branch: str) -> None:
+    try:
+        import subprocess
+
+        subprocess.run(
+            ["git", "checkout", base_branch],
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        subprocess.run(
+            ["git", "reset", "--hard", f"origin/{base_branch}"],
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        pass
+
+
 async def run_fix_pipeline(job_id: str, user_id: str) -> None:
     """
     Full auto-fix pipeline for a single PrJob.
@@ -46,6 +68,7 @@ async def run_fix_pipeline(job_id: str, user_id: str) -> None:
             return
 
         repo_dir = Path("repos") / repo.id
+        base_branch = repo.default_branch or "main"
         if not repo_dir.exists():
             await _fail(job, f"Cloned repo directory not found: {repo_dir}", db)
             return
@@ -83,6 +106,7 @@ async def run_fix_pipeline(job_id: str, user_id: str) -> None:
         await db.commit()
 
         if not passed:
+            _restore_repo(repo_dir, base_branch)
             await _fail(job, "Tests failed after applying the fix. See sandbox log.", db)
             return
 
@@ -115,6 +139,7 @@ async def run_fix_pipeline(job_id: str, user_id: str) -> None:
                 branch_name=branch_name,
                 base_branch=base_branch,
                 changed_files=[issue.file_path],
+                file_updates={issue.file_path: fixed_content},
                 commit_message=commit_msg,
                 github_token=github_token,
                 remote_url=repo.clone_url,

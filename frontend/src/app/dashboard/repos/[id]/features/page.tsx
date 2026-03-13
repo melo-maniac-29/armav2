@@ -22,7 +22,7 @@ const SANDBOX_STYLE: Record<string, string> = {
   skipped: "text-black/40",
 };
 
-const ACTIVE_STATUSES = new Set(["pending", "planning", "coding", "sandboxing", "pushing", "pr_opened"]);
+const ACTIVE_STATUSES = new Set(["pending", "planning", "coding", "sandboxing", "pushing"]);
 
 function PlanView({ planJson }: { planJson: string | null }) {
   const [open, setOpen] = useState(false);

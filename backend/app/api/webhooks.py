@@ -26,7 +26,7 @@ async def _verify_signature(repos: list, sig_header: str, body: bytes) -> "Repo 
     for repo in repos:
         if not repo.webhook_secret:
             continue
-        expected = "sha256=" + hmac.new(
+        expected = "sha256=" + hmac.HMAC(
             repo.webhook_secret.encode("utf-8"),
             body,
             hashlib.sha256,

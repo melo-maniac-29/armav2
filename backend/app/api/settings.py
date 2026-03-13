@@ -106,10 +106,10 @@ async def save_openai_key(
     db: AsyncSession = Depends(get_db),
 ):
     key = body.openai_key.strip()
-    if not key.startswith("sk-"):
+    if not key:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid OpenAI API key format (must start with sk-)",
+            detail="API key must not be empty",
         )
 
     s = await _get_or_create_settings(current_user.id, db)

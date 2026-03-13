@@ -153,7 +153,7 @@ export interface RepoOut {
   github_id: number;
   full_name: string;
   default_branch: string;
-  status: "pending" | "cloning" | "parsing" | "ready" | "error";
+  status: "pending" | "cloning" | "parsing" | "indexing" | "ready" | "error";
   error_msg: string | null;
   webhook_secret: string | null;
   created_at: string;

@@ -11,6 +11,7 @@ Output is used to:
 from __future__ import annotations
 
 import datetime
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,10 +22,13 @@ _BUG_KEYWORDS = frozenset({
     "defect", "revert", "regression", "broken",
 })
 
+_BUG_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(kw) for kw in _BUG_KEYWORDS) + r")\b"
+)
+
 
 def _is_bug_fix(message: str) -> bool:
-    lower = message.lower()
-    return any(kw in lower for kw in _BUG_KEYWORDS)
+    return bool(_BUG_PATTERN.search(message.lower()))
 
 
 @dataclass

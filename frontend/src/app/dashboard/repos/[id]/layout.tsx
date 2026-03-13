@@ -10,6 +10,7 @@ const STATUS_STYLE: Record<string, string> = {
   ready: "bg-[#F9F9F9] text-black border-black border",
   cloning: "bg-blue-50 text-blue-600 border-blue-200 border",
   parsing: "bg-blue-50 text-blue-600 border-blue-200 border",
+  indexing: "bg-blue-50 text-blue-600 border-blue-200 border",
   pending: "bg-[#F9F9F9] text-black/40 border-black/10 border",
   error: "bg-red-50 text-red-600 border-red-200 border",
 };
@@ -100,7 +101,7 @@ export default function RepoLayout({
               <span
                 className={`inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 ${STATUS_STYLE[repo.status] ?? STATUS_STYLE.pending}`}
               >
-                {(repo.status === "cloning" || repo.status === "parsing") && (
+                {(repo.status === "cloning" || repo.status === "parsing" || repo.status === "indexing") && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                 )}
                 {repo.status}
