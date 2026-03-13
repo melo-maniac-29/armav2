@@ -18,20 +18,98 @@ from backend.app.models.base import new_uuid
 from backend.app.models.commit import Commit, CommitFile
 from backend.app.models.file import RepoFile
 from backend.app.models.issue import Issue
+from backend.app.models.pr_job import PrJob
 from backend.app.models.repo import Repo
 from backend.app.models.settings import UserSettings
 from backend.app.models.user import User
 from backend.app.schemas.analysis import IssueListResponse, IssueOut, IssuePatchRequest
 from backend.app.services.analysis import analyze_repo, EXT_LANG, ANALYZABLE_LANGUAGES, SKIP_DIRS, MAX_FILES, MAX_FILE_BYTES
 from backend.app.services.encryption import decrypt
+from backend.app.services.fix_pipeline import run_fix_pipeline
 
 router = APIRouter()
+MAX_AUTO_FIX_JOBS_PER_RUN = 3
 
 
-async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None = None) -> None:
+async def _queue_auto_fix_jobs(
+    db: AsyncSession,
+    repo_id: str,
+    user_id: str,
+    issues: list[Issue],
+    max_jobs: int = MAX_AUTO_FIX_JOBS_PER_RUN,
+) -> None:
+    if not issues:
+        return
+
+    active_statuses = ("pending", "generating", "sandboxing", "pushing", "pr_opened", "merged")
+    rows = (
+        await db.execute(
+            select(Issue.file_path, Issue.title)
+            .join(PrJob, PrJob.issue_id == Issue.id)
+            .where(
+                PrJob.repo_id == repo_id,
+                PrJob.status.in_(active_statuses),
+            )
+        )
+    ).all()
+    existing_pairs = {(row.file_path, row.title) for row in rows}
+
+    severity_rank = {"critical": 0, "error": 1, "warning": 2, "info": 3}
+    queued_jobs: list[str] = []
+    queued_files: set[str] = set()
+    for issue in sorted(issues, key=lambda item: severity_rank.get(item.severity, 4)):
+        key = (issue.file_path, issue.title)
+        if key in existing_pairs:
+            continue
+        if issue.file_path in queued_files:
+            continue
+
+        job = PrJob(
+            id=new_uuid(),
+            repo_id=repo_id,
+            issue_id=issue.id,
+            branch_name=f"arma/fix-{issue.id[:8]}",
+            status="pending",
+        )
+        db.add(job)
+        await db.flush()
+        existing_pairs.add(key)
+        queued_files.add(issue.file_path)
+        queued_jobs.append(job.id)
+        if len(queued_jobs) >= max_jobs:
+            break
+
+    if queued_jobs:
+        await db.commit()
+        for job_id in queued_jobs:
+            asyncio.create_task(run_fix_pipeline(job_id, user_id))
+        log.info("_run_analysis: queued %d auto-fix job(s) for repo %s", len(queued_jobs), repo_id)
+
+
+async def _run_analysis(
+    repo_id: str,
+    user_id: str,
+    file_paths: list[str] | None = None,
+    auto_fix: bool = False,
+) -> None:
     """Background task: rank repo files by commit churn, batch-analyze with LLM."""
+    repo_marked = False
     try:
         async with AsyncSessionLocal() as db:
+            repo = (
+                await db.execute(
+                    select(Repo).where(Repo.id == repo_id, Repo.user_id == user_id)
+                )
+            ).scalar_one_or_none()
+            if not repo:
+                log.warning("_run_analysis: repo %s missing for user %s", repo_id, user_id)
+                return
+
+            repo.status = "analyzing"
+            repo.error_msg = None
+            await db.commit()
+            repo_marked = True
+
             us = (
                 await db.execute(
                     select(UserSettings).where(UserSettings.user_id == user_id)
@@ -39,6 +117,8 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
             ).scalar_one_or_none()
             if not us or not us.openai_token_encrypted:
                 log.warning("_run_analysis: no settings/key for user %s", user_id)
+                repo.status = "ready"
+                await db.commit()
                 return
 
             openai_key = decrypt(us.openai_token_encrypted)
@@ -50,6 +130,9 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
 
             if not repo_dir.exists():
                 log.error("_run_analysis: repo dir missing: %s", repo_dir)
+                repo.status = "ready"
+                repo.error_msg = f"Repository directory missing: {repo_dir}"
+                await db.commit()
                 return
 
             # If caller gave explicit file paths, skip ranking
@@ -100,7 +183,15 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
             )
             log.info("_run_analysis: found %d raw issues total", len(raw_issues))
 
-            await db.execute(delete(Issue).where(Issue.repo_id == repo_id, Issue.status == "open"))
+            analyzed_paths = {path for path in ranked_paths if path}
+            if analyzed_paths:
+                await db.execute(
+                    delete(Issue).where(
+                        Issue.repo_id == repo_id,
+                        Issue.status == "open",
+                        Issue.file_path.in_(analyzed_paths),
+                    )
+                )
 
             # Maps used when LLM puts issue_type value in severity field
             _ISSUE_TYPE_TO_SEVERITY = {
@@ -108,6 +199,7 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
                 "performance": "warning", "style": "info", "other": "info",
             }
             _VALID_SEVERITIES = {"info", "warning", "error", "critical"}
+            created_issues: list[Issue] = []
 
             for raw in raw_issues:
                 severity = raw.get("severity", "warning")
@@ -123,7 +215,7 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
                 else:
                     line_number = None
 
-                db.add(Issue(
+                issue = Issue(
                     id=new_uuid(),
                     repo_id=repo_id,
                     run_id=run_id,
@@ -134,10 +226,36 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
                     title=title,
                     description=description,
                     status="open",
-                ))
+                )
+                db.add(issue)
+                created_issues.append(issue)
 
+            if auto_fix and us.github_token_encrypted:
+                max_auto_fix_jobs = 1 if file_paths is not None else MAX_AUTO_FIX_JOBS_PER_RUN
+                await _queue_auto_fix_jobs(
+                    db,
+                    repo_id,
+                    user_id,
+                    created_issues,
+                    max_jobs=max_auto_fix_jobs,
+                )
+
+            repo.status = "ready"
+            repo.error_msg = None
             await db.commit()
     except Exception as exc:
+        if repo_marked:
+            try:
+                async with AsyncSessionLocal() as db:
+                    repo = (
+                        await db.execute(select(Repo).where(Repo.id == repo_id))
+                    ).scalar_one_or_none()
+                    if repo:
+                        repo.status = "ready"
+                        repo.error_msg = str(exc)[:500]
+                        await db.commit()
+            except Exception:
+                log.exception("_run_analysis cleanup failed for repo %s", repo_id)
         log.exception("_run_analysis failed for repo %s: %s", repo_id, exc)
 
 
@@ -173,6 +291,9 @@ async def trigger_analysis(
             detail="OpenAI API key not configured. Add one in Settings.",
         )
 
+    repo.status = "analyzing"
+    repo.error_msg = None
+    await db.commit()
     background_tasks.add_task(_run_analysis, repo_id, current_user.id, None)
     return {"detail": "Analysis started.", "repo_id": repo_id}
 

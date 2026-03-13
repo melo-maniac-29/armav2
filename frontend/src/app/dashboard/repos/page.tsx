@@ -13,12 +13,17 @@ const STATUS_STYLE: Record<string, string> = {
   cloning: "bg-blue-50 text-blue-600 border-blue-200 border",
   parsing: "bg-blue-50 text-blue-600 border-blue-200 border",
   indexing: "bg-blue-50 text-blue-600 border-blue-200 border",
+  analyzing: "bg-amber-50 text-amber-700 border-amber-200 border",
   pending: "bg-[#F9F9F9] text-black/40 border-black/10 border",
   error: "bg-red-50 text-red-600 border-red-200 border",
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const pulse = status === "cloning" || status === "parsing" || status === "indexing";
+  const pulse =
+    status === "cloning" ||
+    status === "parsing" ||
+    status === "indexing" ||
+    status === "analyzing";
   return (
     <span
       className={`inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 ${STATUS_STYLE[status] ?? STATUS_STYLE.pending}`}
@@ -60,7 +65,12 @@ export default function ReposPage() {
 
   useEffect(() => {
     const processing = connected.filter(
-      (r) => r.status === "pending" || r.status === "cloning" || r.status === "parsing" || r.status === "indexing"
+      (r) =>
+        r.status === "pending" ||
+        r.status === "cloning" ||
+        r.status === "parsing" ||
+        r.status === "indexing" ||
+        r.status === "analyzing"
     );
     if (processing.length === 0) return;
     const timer = setTimeout(fetchConnected, 3000);

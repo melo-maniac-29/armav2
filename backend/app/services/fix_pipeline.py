@@ -5,6 +5,7 @@ run_fix_pipeline(job_id) drives the full Phase 3 flow:
   pending → generating → sandboxing → pushing → pr_opened | failed
 """
 import logging
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from sqlalchemy import select
@@ -24,6 +25,9 @@ from backend.app.services.sandbox import run_sandbox
 logger = logging.getLogger(__name__)
 
 MAX_SANDBOX_LOG = 20_000  # chars stored in DB
+MAX_DELETION_RATIO = 0.35
+MAX_LINE_DELTA_RATIO = 0.30
+MIN_SIMILARITY_RATIO = 0.55
 
 
 def _restore_repo(repo_dir: Path, base_branch: str) -> None:
@@ -46,6 +50,55 @@ def _restore_repo(repo_dir: Path, base_branch: str) -> None:
         )
     except Exception:
         pass
+
+
+def _validate_fix_safety(original_content: str, fixed_content: str, file_path: str) -> str | None:
+    original_lines = original_content.splitlines()
+    fixed_lines = fixed_content.splitlines()
+    original_count = len(original_lines)
+    fixed_count = len(fixed_lines)
+
+    if original_content == fixed_content:
+        return "Generated fix did not change the file."
+
+    if original_count == 0:
+        return None
+
+    matcher = SequenceMatcher(a=original_lines, b=fixed_lines)
+    deletions = 0
+    additions = 0
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag in {"delete", "replace"}:
+            deletions += i2 - i1
+        if tag in {"insert", "replace"}:
+            additions += j2 - j1
+
+    similarity = matcher.ratio()
+    deletion_ratio = deletions / max(original_count, 1)
+    line_delta_ratio = abs(fixed_count - original_count) / max(original_count, 1)
+
+    if fixed_count == 0:
+        return f"Generated fix would empty {file_path}."
+
+    if deletion_ratio > MAX_DELETION_RATIO and deletions > max(40, additions * 3):
+        return (
+            f"Generated fix is too destructive for {file_path}: "
+            f"{deletions} deleted lines vs {additions} added lines."
+        )
+
+    if fixed_count < original_count and line_delta_ratio > MAX_LINE_DELTA_RATIO:
+        return (
+            f"Generated fix shrinks {file_path} too aggressively: "
+            f"{original_count} lines -> {fixed_count} lines."
+        )
+
+    if similarity < MIN_SIMILARITY_RATIO and original_count >= 80:
+        return (
+            f"Generated fix rewrites too much of {file_path}: "
+            f"similarity ratio {similarity:.2f}."
+        )
+
+    return None
 
 
 async def run_fix_pipeline(job_id: str, user_id: str) -> None:
@@ -79,6 +132,17 @@ async def run_fix_pipeline(job_id: str, user_id: str) -> None:
             fixed_content, explanation = await generate_fix(issue, user_id, repo.id, db)
         except Exception as exc:
             await _fail(job, f"Fix generation failed: {exc}", db)
+            return
+
+        try:
+            original_content = (repo_dir / issue.file_path).read_text(encoding="utf-8")
+        except Exception as exc:
+            await _fail(job, f"Cannot read original file for safety checks: {exc}", db)
+            return
+
+        safety_error = _validate_fix_safety(original_content, fixed_content, issue.file_path)
+        if safety_error:
+            await _fail(job, safety_error, db)
             return
 
         # Persist patch text (first 50 KB)

@@ -127,7 +127,7 @@ async def repo_polling_loop():
                             len(changed_files),
                             repo.id,
                         )
-                        asyncio.create_task(_run_analysis(repo.id, repo.user_id, changed_files))
+                        asyncio.create_task(_run_analysis(repo.id, repo.user_id, changed_files, True))
 
                     await _check_pr_statuses(repo, db)
         except asyncio.CancelledError:

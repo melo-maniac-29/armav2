@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { tokenStore } from "@/lib/auth";
-import { issuesApi, IssueOut, IssueListResponse, ApiError } from "@/lib/api";
+import { issuesApi, reposApi, IssueOut, IssueListResponse, ApiError } from "@/lib/api";
 
 const SEVERITY_STYLES: Record<string, { badge: string; label: string }> = {
   critical: { badge: "bg-red-50 text-red-600 border-red-200",    label: "Critical" },
@@ -60,8 +60,6 @@ export default function IssuesPage() {
   async function handleAnalyze() {
     setAnalyzeError(null);
     setAnalyzing(true);
-    // Remember current run_id so we can detect when a NEW analysis completes
-    const prevRunId = data?.issues[0]?.run_id ?? null;
     try {
       const access = tokenStore.getAccess()!;
       await issuesApi.analyze(access, repoId);
@@ -71,18 +69,19 @@ export default function IssuesPage() {
           setAnalyzing(false);
           return;
         }
-        const res = await issuesApi.list(access, repoId).catch(() => null);
-        if (!res) {
+        const repo = await reposApi.get(access, repoId).catch(() => null);
+        if (!repo) {
           setTimeout(poll, 4000);
           return;
         }
-        const newRunId = res.issues[0]?.run_id ?? null;
-        // New run complete when run_id changed, or first-ever run produced results
-        const isDone = prevRunId === null
-          ? res.issues.length > 0
-          : newRunId !== prevRunId;
-        if (isDone) {
-          setData(res);
+        if (repo.status !== "analyzing") {
+          const res = await issuesApi.list(access, repoId, {
+            status: filterStatus === "all" ? undefined : filterStatus,
+            severity: filterSeverity === "all" ? undefined : filterSeverity,
+          }).catch(() => null);
+          if (res) {
+            setData(res);
+          }
           setAnalyzing(false);
         } else {
           setTimeout(poll, 4000);

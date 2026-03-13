@@ -101,7 +101,7 @@ async def github_webhook(
     repo_dir = Path("repos") / matched_repo.id
     existing = [p for p in changed if (repo_dir / p).exists()] if changed else None
 
-    background_tasks.add_task(_run_analysis, matched_repo.id, matched_repo.user_id, existing)
+    background_tasks.add_task(_run_analysis, matched_repo.id, matched_repo.user_id, existing, True)
 
 
 async def _handle_pr_merged(payload: dict, repo: "Repo", db: AsyncSession) -> None:
