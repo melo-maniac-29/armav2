@@ -39,16 +39,60 @@ export default function Home() {
     <div className="min-h-screen bg-[#F9F9F9] text-[#111] font-sans selection:bg-black selection:text-white overflow-x-hidden">
       {/* Background accents */}
       <div className="fixed inset-0 z-0 pointer-events-none">
+        <style>{`
+          @keyframes flowRight {
+            0% { transform: translateX(-10vw); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateX(110vw); opacity: 0; }
+          }
+          @keyframes flowDown {
+            0% { transform: translateY(-10vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(110vh); opacity: 0; }
+          }
+          .animate-flow-r-1 { animation: flowRight 12s linear infinite; }
+          .animate-flow-r-2 { animation: flowRight 18s linear infinite 3s; }
+          .animate-flow-d-1 { animation: flowDown 15s linear infinite 1s; }
+          .animate-flow-d-2 { animation: flowDown 22s linear infinite 6s; }
+          .animate-flow-d-3 { animation: flowDown 19s linear infinite 4s; }
+        `}</style>
+
         {/* Subtle noise */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-multiply"></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.025] mix-blend-multiply z-0"></div>
         {/* Fine grid mask */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_40%,transparent_100%)] z-10"></div>
+        
+        {/* Architectural compute routing lines */}
+        <div className="absolute inset-0 z-20 overflow-hidden mix-blend-multiply opacity-50">
+           {/* Vertical Traces */}
+           <div className="absolute left-[20%] top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-black/10 to-transparent" />
+           <div className="absolute left-[40%] top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-black/20 to-transparent" />
+           <div className="absolute left-[70%] top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-black/10 to-transparent" />
+           <div className="absolute left-[85%] top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-black/20 to-transparent" />
+
+           {/* Horizontal Traces */}
+           <div className="absolute top-[25%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-black/20 to-transparent" />
+           <div className="absolute top-[55%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-black/10 to-transparent" />
+           <div className="absolute top-[75%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-black/20 to-transparent" />
+
+           {/* Moving Data Nodes (GPU execution) */}
+           <div className="absolute top-[25%] left-0 w-[3px] h-[3px] bg-black -mt-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-r-1" />
+           <div className="absolute top-[55%] left-0 w-[3px] h-[3px] bg-black -mt-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-r-2" />
+           <div className="absolute top-[75%] left-0 w-[3px] h-[3px] bg-black -mt-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-r-1" style={{ animationDelay: '8s' }} />
+
+           <div className="absolute left-[20%] top-0 w-[3px] h-[3px] bg-black -ml-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-d-1" />
+           <div className="absolute left-[40%] top-0 w-[3px] h-[3px] bg-black -ml-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-d-2" />
+           <div className="absolute left-[70%] top-0 w-[3px] h-[3px] bg-black -ml-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-d-3" />
+           <div className="absolute left-[85%] top-0 w-[3px] h-[3px] bg-black -ml-[1px] shadow-[0_0_12px_rgba(0,0,0,1)] animate-flow-d-1" style={{ animationDelay: '5s' }} />
+        </div>
       </div>
 
-      <nav className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12 w-full max-w-[1600px] mx-auto">
+      <nav className="relative z-30 flex items-center justify-between px-6 py-6 md:px-12 w-full max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3">
-          <div className="text-black font-black text-2xl tracking-tighter">ARMA.</div>
-          <div className="px-2 py-0.5 border border-black/10 rounded-full text-[10px] font-bold tracking-widest text-[#111] uppercase bg-black/5">
+          <div className="text-black font-black text-2xl tracking-tighter mix-blend-difference">ARMA.</div>
+          <div className="px-2 py-0.5 border border-black/10 rounded-full text-[10px] font-bold tracking-widest text-[#111] uppercase bg-black/5 backdrop-blur-sm">
             V3.0.0
           </div>
         </div>
@@ -56,17 +100,17 @@ export default function Home() {
           <Link href="/login" className="text-xs uppercase tracking-widest text-black/60 hover:text-black transition-colors duration-300 font-bold">
             Sign In
           </Link>
-          <Link href="/register" className="text-xs uppercase tracking-widest text-black border border-black/20 hover:border-black px-5 py-3 rounded-full transition-all duration-300 hover:bg-black hover:text-white font-bold">
+          <Link href="/register" className="text-xs uppercase tracking-widest text-black border border-black/20 hover:border-black px-5 py-3 rounded-full transition-all duration-300 hover:bg-black hover:text-white font-bold backdrop-blur-sm bg-white/50">
             System Access
           </Link>
         </div>
       </nav>
 
-      <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12">
+      <main className="relative z-30 w-full max-w-[1600px] mx-auto px-6 md:px-12">
         {/* Hero */}
         <section className="pt-24 pb-32 md:pt-40 md:pb-48">
-          <div className="inline-flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest text-black mb-10 px-4 py-2 border border-black/10 rounded-full bg-white shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="inline-flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest text-black mb-10 px-4 py-2 border border-black/10 rounded-full bg-white/80 backdrop-blur-md shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
             System is fully operational
           </div>
           <h1 className="text-[4rem] md:text-[8rem] lg:text-[11rem] leading-[0.85] tracking-[-0.05em] font-medium text-black mb-12">
