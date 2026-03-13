@@ -159,6 +159,24 @@ async def reindex_commits(
     if not repo_dir.exists():
         raise HTTPException(status_code=400, detail="Cloned repo directory not found. Please re-connect the repo.")
 
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git", "fetch", "origin", repo.default_branch,
+            cwd=str(repo_dir),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+        proc = await asyncio.create_subprocess_exec(
+            "git", "pull", "origin", repo.default_branch,
+            cwd=str(repo_dir),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+    except Exception as e:
+        logger.warning("[reindex-commits] failed to git pull: %s", e)
+
     # Parse git log in a thread (subprocess)
     commit_records = await asyncio.get_event_loop().run_in_executor(
         None, lambda: parse_git_log(repo_dir, max_commits=500)

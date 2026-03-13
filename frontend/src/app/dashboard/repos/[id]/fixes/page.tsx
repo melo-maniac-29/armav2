@@ -10,7 +10,7 @@ const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
   generating: { badge: "bg-blue-50 text-blue-600 border-blue-200",    label: "Synthesizing" },
   sandboxing: { badge: "bg-amber-50 text-amber-600 border-amber-200", label: "Sandboxing" },
   pushing:    { badge: "bg-indigo-50 text-indigo-600 border-indigo-200", label: "Pushing" },
-  pr_opened:  { badge: "bg-emerald-50 text-emerald-600 border-emerald-200",   label: "PR Active" },
+  pr_opened:  { badge: "bg-emerald-50 text-emerald-600 border-emerald-200",   label: "PR Opened" },
   merged:     { badge: "bg-purple-50 text-purple-600 border-purple-200", label: "Merged" },
   failed:     { badge: "bg-red-50 text-red-600 border-red-200",         label: "Failed" },
 };
@@ -21,7 +21,7 @@ const SANDBOX_STYLE: Record<string, string> = {
   skipped: "text-black/40",
 };
 
-const ACTIVE_STATUSES = new Set(["pending", "generating", "sandboxing", "pushing"]);
+const ACTIVE_STATUSES = new Set(["pending", "generating", "sandboxing", "pushing", "pr_opened"]);
 
 export default function FixesPage() {
   const params = useParams<{ id: string }>();

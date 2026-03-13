@@ -109,6 +109,7 @@ async def run_feature_pipeline(fr_id: str, user_id: str) -> None:
             push_fix_branch(
                 repo_dir=repo_dir,
                 branch_name=fr.branch_name,
+                base_branch=default_branch,
                 changed_files=list(patches.keys()),
                 commit_message=commit_msg,
                 github_token=github_token,

@@ -36,6 +36,8 @@ async def _full_pipeline(repo_id: str, user_id: str) -> None:
     await asyncio.to_thread(clone_and_parse_sync, repo_id)
 
     # Step 2 — async embedding (skip if user has no OpenAI key or API unavailable)
+    symbols_data = []
+    files_data = []
     try:
         async with AsyncSessionLocal() as db:
             # Load symbol data for graph building while we have the session
@@ -73,7 +75,8 @@ async def _full_pipeline(repo_id: str, user_id: str) -> None:
     # Step 3 — async Neo4j graph build + commit co-changes
     try:
         async with AsyncSessionLocal() as db:
-            await build_repo_graph(repo_id, symbols_data, files_data)
+            if symbols_data and files_data:
+                await build_repo_graph(repo_id, symbols_data, files_data)
             await build_co_change_graph(repo_id, db)
     except Exception as e:
         logger.warning("[pipeline] graph build failed for %s: %s", repo_id, e)  # non-fatal

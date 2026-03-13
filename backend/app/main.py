@@ -22,9 +22,14 @@ from backend.app.api import health as health_router
 settings = get_settings()
 
 
+from backend.app.services.poller import repo_polling_loop
+import asyncio
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    task = asyncio.create_task(repo_polling_loop())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="ARMA v3", version="3.0.0", lifespan=lifespan)

@@ -11,18 +11,18 @@ const STATUS_STYLE: Record<string, { badge: string; label: string }> = {
   coding:     { badge: "bg-blue-50 text-blue-700 border-blue-200",        label: "Coding" },
   sandboxing: { badge: "bg-amber-50 text-amber-700 border-amber-200",  label: "Sandboxing" },
   pushing:    { badge: "bg-indigo-50 text-indigo-700 border-indigo-200",  label: "Pushing" },
-  pr_opened:  { badge: "bg-emerald-50 text-emerald-700 border-emerald-200",     label: "PR Active" },
+  pr_opened:  { badge: "bg-emerald-50 text-emerald-700 border-emerald-200",     label: "PR Opened" },
   merged:     { badge: "bg-purple-50 text-purple-700 border-purple-200",  label: "Merged" },
   failed:     { badge: "bg-red-50 text-red-700 border-red-200",           label: "Failed" },
 };
 
 const SANDBOX_STYLE: Record<string, string> = {
-  passed:  "text-emerald-600",
-  failed:  "text-red-600",
+  passed:  "text-emerald-700",
+  failed:  "text-red-700",
   skipped: "text-black/40",
 };
 
-const ACTIVE_STATUSES = new Set(["pending", "planning", "coding", "sandboxing", "pushing"]);
+const ACTIVE_STATUSES = new Set(["pending", "planning", "coding", "sandboxing", "pushing", "pr_opened"]);
 
 function PlanView({ planJson }: { planJson: string | null }) {
   const [open, setOpen] = useState(false);

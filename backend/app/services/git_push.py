@@ -4,7 +4,6 @@ Git + GitHub helpers for the auto-fix pipeline.
 push_fix_branch: commit the fixed file on a new branch and push to GitHub.
 create_github_pr: open a PR via the GitHub REST API.
 """
-import asyncio
 import re
 import subprocess
 from pathlib import Path
@@ -34,6 +33,7 @@ def _run_git(args: list[str], cwd: Path) -> str:
 def push_fix_branch(
     repo_dir: Path,
     branch_name: str,
+    base_branch: str,
     changed_files: list[str],
     commit_message: str,
     github_token: str,
@@ -49,30 +49,41 @@ def push_fix_branch(
     4. Commit.
     5. Push with embedded token (never logged).
     """
-    # Ensure git user is set (required inside Docker)
-    _run_git(["config", "user.email", "arma-bot@arma.dev"], repo_dir)
-    _run_git(["config", "user.name", "ARMA Bot"], repo_dir)
-
-    # Create / reset branch from current HEAD
     try:
-        _run_git(["checkout", "-b", branch_name], repo_dir)
-    except RuntimeError:
-        # Branch may already exist — reset it
-        _run_git(["checkout", branch_name], repo_dir)
-        _run_git(["reset", "--hard", "HEAD"], repo_dir)
+        _run_git(["config", "user.email", "arma-bot@arma.dev"], repo_dir)
+        _run_git(["config", "user.name", "ARMA Bot"], repo_dir)
 
-    # Stage the changed files
-    for rel_path in changed_files:
-        _run_git(["add", rel_path], repo_dir)
+        # Always branch from the latest remote default branch.
+        _run_git(["fetch", "origin", base_branch], repo_dir)
+        _run_git(["checkout", base_branch], repo_dir)
+        _run_git(["reset", "--hard", f"origin/{base_branch}"], repo_dir)
+        _run_git(["checkout", "-B", branch_name, f"origin/{base_branch}"], repo_dir)
 
-    # Commit
-    _run_git(["commit", "-m", commit_message], repo_dir)
+        for rel_path in changed_files:
+            _run_git(["add", rel_path], repo_dir)
 
-    # Build authenticated remote URL
-    # e.g. https://github.com/owner/repo.git → https://token@github.com/owner/repo.git
-    auth_url = _inject_token(remote_url, github_token)
+        staged = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+        )
+        if staged.returncode == 0:
+            raise RuntimeError("No file changes were staged for commit.")
+        if staged.returncode not in (0, 1):
+            raise RuntimeError("Unable to verify staged changes before commit.")
 
-    _run_git(["push", auth_url, f"{branch_name}:{branch_name}", "--force"], repo_dir)
+        _run_git(["commit", "-m", commit_message], repo_dir)
+
+        auth_url = _inject_token(remote_url, github_token)
+        _run_git(["push", auth_url, f"{branch_name}:{branch_name}", "--force"], repo_dir)
+    finally:
+        # Restore the shared clone to the default branch for the poller.
+        try:
+            _run_git(["checkout", base_branch], repo_dir)
+            _run_git(["reset", "--hard", f"origin/{base_branch}"], repo_dir)
+        except RuntimeError:
+            pass
 
 
 def _inject_token(remote_url: str, token: str) -> str:

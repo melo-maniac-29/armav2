@@ -113,6 +113,7 @@ async def run_fix_pipeline(job_id: str, user_id: str) -> None:
             push_fix_branch(
                 repo_dir=repo_dir,
                 branch_name=branch_name,
+                base_branch=base_branch,
                 changed_files=[issue.file_path],
                 commit_message=commit_msg,
                 github_token=github_token,

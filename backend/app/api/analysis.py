@@ -100,7 +100,7 @@ async def _run_analysis(repo_id: str, user_id: str, file_paths: list[str] | None
             )
             log.info("_run_analysis: found %d raw issues total", len(raw_issues))
 
-            await db.execute(delete(Issue).where(Issue.repo_id == repo_id))
+            await db.execute(delete(Issue).where(Issue.repo_id == repo_id, Issue.status == "open"))
 
             # Maps used when LLM puts issue_type value in severity field
             _ISSUE_TYPE_TO_SEVERITY = {
