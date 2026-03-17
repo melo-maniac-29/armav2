@@ -22,6 +22,7 @@ generates a fix → sandbox validates → PR raised. No human needed, no downtim
 
 ---
 
+
 ## What Is Built
 
 ARMA is a full-stack web application across **4 shipped phases**:
